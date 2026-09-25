@@ -1,0 +1,51 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<!--
+  Launchd template for the STAGING runtime (capability-build pipeline,
+  2026-06-10). Modeled on launchd/com.megha.kavi.plist (production).
+  Installed by scripts/install_staging_service.sh into
+  ~/Library/LaunchAgents/ on Kavi's Mac.
+
+  One-time prerequisite (the entrypoint below is the console script the
+  editable install creates):
+      cd /Users/kavi/kavi-staging
+      python3 -m venv .venv && .venv/bin/pip install -e .
+-->
+<plist version="1.0">
+  <dict>
+    <key>Label</key>
+    <string>com.megha.kavi-staging</string>
+
+    <key>ProgramArguments</key>
+    <array>
+      <string>/Users/kavi/kavi-staging/.venv/bin/kavi-runtime</string>
+    </array>
+
+    <key>EnvironmentVariables</key>
+    <dict>
+      <key>PATH</key>
+      <string>/Users/kavi/.local/bin:/usr/local/bin:/usr/bin:/bin:/opt/homebrew/bin</string>
+    </dict>
+
+    <key>WorkingDirectory</key>
+    <string>/Users/kavi/kavi-staging</string>
+
+    <key>RunAtLoad</key>
+    <true/>
+
+    <key>KeepAlive</key>
+    <dict>
+      <key>SuccessfulExit</key>
+      <false/>
+    </dict>
+
+    <key>StandardOutPath</key>
+    <string>/Users/kavi/Library/Logs/kavi-staging.out.log</string>
+
+    <key>StandardErrorPath</key>
+    <string>/Users/kavi/Library/Logs/kavi-staging.err.log</string>
+
+    <key>ThrottleInterval</key>
+    <integer>30</integer>
+  </dict>
+</plist>

@@ -1,0 +1,190 @@
+# EXAMPLE CONFIG with a fictional household (Alex Rivera, Sam Chen, kid Theo).
+# Copy to config-staging.yaml and fill in your own values. The real file is gitignored.
+# kavi-runtime STAGING config (capability-build pipeline, 2026-06-10).
+#
+# Shipped by scripts/deploy_staging.sh AS the staging instance's
+# config.yaml at /Users/assistant/kavi-staging/config.yaml. Same Mac as
+# production, second launchd service (com.example.kavi-staging), port 8081.
+#
+# What staging is: the LLM-replay sandbox the matrix runner
+# (scripts/run_matrix.py) targets by default. Synthetic compose/verify
+# routes + /health + /status work normally — the Claude client is REAL
+# (matrix replays need real composer calls; same ANTHROPIC_API_KEY from
+# ~/.config/kavi/.env as production).
+#
+# What staging is NOT: a second Kavi. `staging_mode: true` below
+#   - HARD-blocks every outbound send in runtime/send_imessage.py
+#     (no BlueBubbles, no Outlook fallback — the check runs first),
+#   - registers NO scheduler jobs (no digests, no Graph subscription
+#     renewal, no heartbeats, no healthchecks.io pings),
+#   - returns 503 "staging" on both webhook routes (Graph + BlueBubbles).
+#
+# State paths point at /Users/assistant/HomeOS-staging/ — a sandbox tree the
+# production runtime never reads — so even operational log rows from
+# synthetic replays cannot pollute production eval surfaces.
+
+staging_mode: true
+
+paths:
+  homeos_root: "/Users/assistant/HomeOS-staging"
+  household_md: "/Users/assistant/HomeOS-staging/household.md"
+  inbox_to_task_md: "/Users/assistant/HomeOS-staging/capabilities/inbox-to-task.md"
+  # Spec loaders read from the staging deploy tree (rsync'd by
+  # deploy_staging.sh), mirroring production's /Users/assistant/kavi-runtime/.
+  kavi_persona_md: "/Users/assistant/kavi-staging/capabilities/kavi-persona.md"
+  security_baseline_md: "/Users/assistant/kavi-staging/capabilities/security-baseline.md"
+  startup_marker: "/Users/assistant/HomeOS-staging/state/last_startup.json"
+  corrections_jsonl: "/Users/assistant/HomeOS-staging/corrections.jsonl"
+  promoted_patterns_jsonl: "/Users/assistant/HomeOS-staging/promoted_patterns.jsonl"
+  rejected_patterns_jsonl: "/Users/assistant/HomeOS-staging/rejected_patterns.jsonl"
+  eval_inbox_judgments_jsonl: "/Users/assistant/HomeOS-staging/evals/inbox-to-task/eval-inbox-judgments.jsonl"
+  eval_persona_weekly_self_check_jsonl: "/Users/assistant/HomeOS-staging/evals/kavi-persona/eval-persona-weekly-self-check.jsonl"
+  eval_persona_day_mute_events_jsonl: "/Users/assistant/HomeOS-staging/evals/kavi-persona/eval-persona-day-mute-events.jsonl"
+  eval_persona_close_suggestions_jsonl: "/Users/assistant/HomeOS-staging/evals/kavi-persona/eval-persona-close-suggestions.jsonl"
+  eval_persona_outbound_judgments_jsonl: "/Users/assistant/HomeOS-staging/evals/kavi-persona/eval-persona-outbound-judgments.jsonl"
+  eval_persona_inbound_jsonl: "/Users/assistant/HomeOS-staging/evals/kavi-persona/eval-persona-inbound.jsonl"
+  runtime_events_jsonl: "/Users/assistant/HomeOS-staging/metrics/runtime-events.jsonl"
+  decisions_md: "/Users/assistant/HomeOS-staging/judgment-log/decisions.md"
+  imessage_state: "/Users/assistant/HomeOS-staging/state/imessage-state.json"
+  skills_dir: "/Users/assistant/kavi-staging/skills"
+  eval_persona_action_intent_jsonl: "/Users/assistant/HomeOS-staging/evals/kavi-persona/eval-persona-action-intent.jsonl"
+  learned_facts: "/Users/assistant/HomeOS-staging/learned_facts.jsonl"
+  eval_coordinates_judgments_jsonl: "/Users/assistant/HomeOS-staging/evals/kavi-coordinates/eval-coordinates-judgments.jsonl"
+  outbound_blocked_jsonl: "/Users/assistant/HomeOS-staging/outbound_blocked.jsonl"
+  exchanges_jsonl: "/Users/assistant/HomeOS-staging/evals/traces/exchanges.jsonl"
+
+server:
+  # Same bind posture as production; staging is reachable from Alex's Mac
+  # over the Tailscale mesh at http://100.64.0.10:8081. No Funnel, no
+  # public URL: nothing on the public internet ever needs to reach staging.
+  host: "0.0.0.0"
+  port: 8081
+  public_url: null
+
+claude:
+  # Real composer calls, same models as production — a staging replay that
+  # runs a different model verifies nothing.
+  model: "claude-sonnet-4-6"
+  max_tokens: 1024
+  enable_prompt_caching: true
+
+max_tokens_routing:
+  compose_email_to_tasks_judgment: 1024  # mirrors config.yaml (2026-09-24)
+
+model_routing:
+  default: claude-sonnet-4-6
+  classify_action_intent: claude-haiku-4-5
+  check_semantic_duplicate: claude-haiku-4-5  # 2026-09-23 cost pass
+  # classify_qa_reply DELETED 2026-06-10 (intent-first dispatch rebuild).
+  # The reply intent parser stays on Sonnet (default): it owns multi-intent
+  # extraction + offer binding — the judgment the 2026-06-10 incident proved
+  # is quality-critical. Consider a Haiku trial only after matrix-green weeks.
+
+graph:
+  # Present for config-shape compatibility (clients are constructed lazily
+  # and webhooks/scheduler never run in staging). No subscriptions are ever
+  # created or renewed from this instance.
+  user: "me"
+  subscription_lifetime_minutes: 4230
+  subscription_renewal_buffer_minutes: 60
+  mstodo_shared_list_id: "YOUR_MS_TODO_LIST_ID"
+
+bluebubbles:
+  # Never called in staging (outbound hard-blocked, webhook 503, scheduler
+  # gated). Kept so config readers don't KeyError.
+  base_url: "http://127.0.0.1:1234"
+  inbound_webhook_path: "/imessage"
+
+imessage:
+  megha_phone: "+15555550101"
+  max_phone: "+15555550102"
+  chat_guid_prefix: "any;-;"
+  own_email_addresses:
+    - "alex.rivera@outlook.com"
+
+household:
+  # Household identity. Code reads these via kavi_runtime/household.py
+  # instead of hard-coding them. Phones are imessage.megha_phone /
+  # imessage.max_phone above. First email = the member's primary Microsoft
+  # mailbox; the rest are aliases. Fictional values; put real ones in
+  # your private config.yaml.
+  members:
+    megha:
+      emails: ["megha@example.com", "megha.alt@example.com"]
+    max:
+      emails: ["max@example.com", "max.alt@example.com"]
+  kavi_apple_id: "kavi@example.com"
+
+ops:
+  # Where Kavi's Mac lives on your private mesh (e.g. Tailscale). Used in
+  # alert emails ("Err log: ssh ...") and the realtime-kavi status verify.
+  kavi_ssh_host: "kavi@100.64.0.10"
+  kavi_tailnet_addr: "100.64.0.10"
+
+schedule:
+  # Parsed at config load by code paths shared with production; no job is
+  # ever registered while staging_mode is true.
+  periodic_summary_times: ["07:00"]
+  end_of_day_rollup: "21:00"
+  quiet_hours_start: "23:00"
+  quiet_hours_end: "07:00"
+  correction_pattern_check_every_hours: 6
+  weekly_self_check_send_time: "14:00"
+  weekly_self_check_timeout_hours: 24
+
+guardrails:
+  # Spend cap kept at production level: matrix runs are real Sonnet calls
+  # and share the monthly Anthropic budget.
+  monthly_anthropic_spend_usd_cap: 30
+  # Resume backlog drain (2026-09-23): only mail from the last N days is
+  # processed; held accounts stay queued untouched (Sam until re-auth).
+  drain_max_age_days: 7
+  drain_hold_accounts:
+    - sam.chen@outlook.com
+  webhook_flood_per_hour: 50
+  per_call_input_token_cap: 50000
+  false_positive_window_days: 7
+  false_positive_rate_pause_threshold: 0.50
+  repeat_error_pause_threshold: 3
+
+priority_senders:
+  - "Jordan Lee"
+
+learning:
+  correction_threshold_for_proposal: 2
+  correction_threshold_after_rejection: 3
+
+action_layer:
+  # Defense in depth: even though no action path is reachable in staging
+  # (webhooks 503), keep the action layer in dry-run.
+  dry_run: true
+
+inbox_pre_filter:
+  shadow_mode: true
+
+healthcheck:
+  # Never ping production's healthchecks.io check from staging — a healthy
+  # staging instance must not mask a dead production runtime.
+  url: null
+
+# Email judge routing (not wired yet). Cheap model by default; the strong
+# model for replies/forwards, keep-list senders and strong_senders, plus a
+# strong-model second look when the cheap model skips a matching subject.
+inbox_to_task:
+  judge_routing:
+    strong_on_reply_or_forward: true
+    strong_senders:
+      - maplestreetschool.org
+      - lakeviewswim.example.com
+    second_look_subjects:
+      - "just messaged you"
+      - "\\bshipped\\b|\\bdelivered\\b"
+      - "security alert"
+
+# Known, accepted health violations that must not block a deploy
+# (verify_deploy.sh step 3). Each needs an expiry date.
+deploy:
+  accepted_health_violations: []
+  # - account: sam.chen@outlook.com
+  #   until: "2026-10-01"
+  #   reason: "mailbox sign-in expired; waiting on a reconnect"

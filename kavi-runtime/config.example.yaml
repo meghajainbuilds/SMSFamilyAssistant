@@ -1,0 +1,351 @@
+# EXAMPLE CONFIG with a fictional household (Alex Rivera, Sam Chen, kid Theo).
+# Copy to config.yaml and fill in your own values. The real file is gitignored.
+# kavi-runtime config
+# Paths are absolute; assumes HomeOS lives at ~/Documents/HomeOS on Kavi's Mac.
+
+paths:
+  # Paths on Kavi's Mac. HomeOS is rsync'd from Alex's laptop to Kavi's Mac at
+  # /Users/assistant/HomeOS/. kavi-runtime lives separately at /Users/assistant/kavi-runtime/.
+  homeos_root: "/Users/assistant/HomeOS"
+  household_md: "/Users/assistant/HomeOS/household.md"
+  # Added 2026-04-29 evening: capability behavior doc (Hard rules / Examples / Q&A learned)
+  # is now loaded into the runtime's system prompt alongside household.md. Prior to this,
+  # the runtime read only household.md and the skill prompt's embedded few-shot examples;
+  # all spec changes to capabilities/inbox-to-task.md were documentation-only.
+  # Deployed copy (synced by deploy.sh on every deploy). Until 2026-09-23 this
+  # pointed at a hand-copied /Users/assistant/HomeOS/capabilities/ file frozen on
+  # May 7, so spec edits since then never reached the email judge.
+  inbox_to_task_md: "/Users/assistant/kavi-runtime/capabilities/inbox-to-task.md"
+  # Added 2026-05-27 (spec-IS-the-runtime collapse): persona text — voice,
+  # three character traits, refusal language, identity — is now loaded at
+  # runtime from the canonical spec instead of being copy-pasted into each
+  # skill file. The deploy script (scripts/deploy.sh) rsyncs the entire
+  # capabilities/ folder to /Users/assistant/kavi-runtime/capabilities/ on Kavi
+  # so the path below resolves on the runtime host. Persona extraction
+  # logic lives in kavi_runtime/persona_loader.py.
+  kavi_persona_md: "/Users/assistant/kavi-runtime/capabilities/kavi-persona.md"
+  # Added 2026-05-28 (second leg of the spec-IS-the-runtime collapse):
+  # security baseline text — categorical never-do list, refusal under
+  # social-engineering, inbound-as-data rule — is now loaded at runtime
+  # from capabilities/security-baseline.md instead of living in
+  # kavi_runtime/persona_prompts.PERSONA_REFUSAL_LAYER. Ships through the
+  # same capabilities/ rsync block as the persona spec. Extraction logic
+  # lives in kavi_runtime/security_baseline.py.
+  security_baseline_md: "/Users/assistant/kavi-runtime/capabilities/security-baseline.md"
+  # Added 2026-05-28 (spec-IS-the-runtime drift alarm). The startup probe
+  # in kavi_runtime/startup_probe.py runs both spec loaders before the
+  # HTTP server boots; if either fails, it writes a structured failure
+  # marker here and exits non-zero. On success it writes ok=true with
+  # the two text hashes so /status can render "loaders OK at <ts>".
+  # Lives alongside imessage_state under HomeOS/state/.
+  startup_marker: "/Users/assistant/HomeOS/state/last_startup.json"
+  corrections_jsonl: "/Users/assistant/HomeOS/corrections.jsonl"
+  promoted_patterns_jsonl: "/Users/assistant/HomeOS/promoted_patterns.jsonl"
+  rejected_patterns_jsonl: "/Users/assistant/HomeOS/rejected_patterns.jsonl"
+  # Eval surface for inbox-to-task decisions (one row per email Kavi processed).
+  # Mirrored to Alex's Mac and consumed by the HTML-viewer weekly trace at
+  # evals/inbox-to-task/traces/eval-inbox-week<N>.jsonl (chat-based daily
+  # surface retired 2026-05-27).
+  eval_inbox_judgments_jsonl: "/Users/assistant/HomeOS/evals/inbox-to-task/eval-inbox-judgments.jsonl"
+  # Eval surface for kavi-persona Stage 4 system-level value metrics (added 2026-05-04).
+  # weekly-self-check: one row per Friday self-check event (sent + reply or no_reply).
+  # day-mute-events: one row per quiet_until set event (NOT YET WIRED; blocked on
+  # steering implementation per kavi-runtime/backlog.md).
+  eval_persona_weekly_self_check_jsonl: "/Users/assistant/HomeOS/evals/kavi-persona/eval-persona-weekly-self-check.jsonl"
+  eval_persona_day_mute_events_jsonl: "/Users/assistant/HomeOS/evals/kavi-persona/eval-persona-day-mute-events.jsonl"
+  # Evening suggest-to-close judgments (added 2026-06-10): one row per
+  # (task, sent-reply) pair the close-suggestion judge evaluated — both
+  # suggest and no-suggest verdicts — so Alex can label precision in the
+  # weekly open-coding pass. Schema: evals/definitions.md.
+  eval_persona_close_suggestions_jsonl: "/Users/assistant/HomeOS/evals/kavi-persona/eval-persona-close-suggestions.jsonl"
+  # Outbound logger (added 2026-05-04 acceptance criteria pass): one row per Kavi
+  # outbound message. Mirrored to Alex's Mac and consumed by the HTML-viewer
+  # weekly trace at evals/kavi-persona/traces/eval-persona-week<N>.jsonl
+  # (chat-based daily + weekly surfaces retired 2026-05-27). Structural gates
+  # (G-V1-V5, G-P1-P3) computed at log time and stored on the row.
+  # Filename keeps "outbound" prefix until a coordinated runtime patch renames
+  # to eval-persona-judgments.jsonl per kavi-runtime/backlog.md.
+  eval_persona_outbound_judgments_jsonl: "/Users/assistant/HomeOS/evals/kavi-persona/eval-persona-outbound-judgments.jsonl"
+  # Inbound logger (added 2026-05-04 evening): one row per inbound iMessage from
+  # Alex. Pairs with outbound via triggered_by linkage so weekly traces can
+  # render the inbound text alongside Kavi's reply for context-aware labeling.
+  eval_persona_inbound_jsonl: "/Users/assistant/HomeOS/evals/kavi-persona/eval-persona-inbound.jsonl"
+  # Operational event log (periodic summaries, scheduler-level guardrail trips, etc.).
+  # Not part of the eval surface; kept for runtime ops/debugging.
+  runtime_events_jsonl: "/Users/assistant/HomeOS/metrics/runtime-events.jsonl"
+  decisions_md: "/Users/assistant/HomeOS/judgment-log/decisions.md"
+  # Moved 2026-05-06 PM (P1.6 of audit). Was /Users/assistant/HomeOS/.claude/
+  # which is a Claude Code working-tree marker, not a state directory.
+  # Runtime state now lives under HomeOS/state/, alongside HomeOS/evals/
+  # and HomeOS/learned_facts.jsonl. The state_invariants startup check
+  # detects any state file still at the legacy .claude/ path and logs
+  # CRITICAL with the migration command.
+  imessage_state: "/Users/assistant/HomeOS/state/imessage-state.json"
+  skills_dir: "/Users/assistant/kavi-runtime/skills"
+  # Stage 1 action layer (added 2026-05-05): one row per action-intent classifier
+  # decision (executed, dry-run, fall-through). Source for validating classifier
+  # accuracy before flipping action_layer.dry_run from true to false.
+  eval_persona_action_intent_jsonl: "/Users/assistant/HomeOS/evals/kavi-persona/eval-persona-action-intent.jsonl"
+  # Cross-day durable facts (G-C3 v0, added 2026-05-05): append-only fact store
+  # for commitments and household state Kavi must remember across conversations.
+  # Module: kavi_runtime.durable_facts. Cap 2 (kavi-coordinates) will wire reads
+  # into the reply-context builder; v0 is storage + helpers only.
+  learned_facts: "/Users/assistant/HomeOS/learned_facts.jsonl"
+  # Kavi coordinates eval surface (added 2026-05-05): one row per coordination
+  # state transition (ack / addressee-reach / addressee-reply / branch-decision /
+  # outcome-report / follow-up-sent / escalated-to-requester / session-failed).
+  # Read by /eval-coordinates slash command via HTTP from Alex's Mac.
+  eval_coordinates_judgments_jsonl: "/Users/assistant/HomeOS/evals/kavi-coordinates/eval-coordinates-judgments.jsonl"
+  # Outbound block audit log (just-shipped Realtime Kavi security guardrails,
+  # 2026-05-05): one row per blocked outbound iMessage / task body / durable-
+  # fact write / discarded inbound iMessage. Read by daily review to surface
+  # any deterministic gate trips. Schema in kavi_runtime.outbound_scanner.
+  outbound_blocked_jsonl: "/Users/assistant/HomeOS/outbound_blocked.jsonl"
+  # Phase B unified-trace (added 2026-05-12): one row per inbound exchange
+  # (iMessage or email) capturing system prompt snapshot + full LLM-call
+  # cascade + tool calls + outbound. Schema in kavi_runtime.trace_log; the
+  # Phase A backfill (evals/traces/exchanges-backfill-week1.jsonl) shares
+  # the same shape so the HTML viewer can read either file.
+  exchanges_jsonl: "/Users/assistant/HomeOS/evals/traces/exchanges.jsonl"
+
+server:
+  # Bind to all interfaces so BOTH paths reach the runtime:
+  #   1. Tailscale Funnel proxies https://<your-funnel-hostname> -> http://127.0.0.1:8080.
+  #      Microsoft Graph webhooks AND BlueBubbles webhooks arrive this way.
+  #   2. Alex's laptop on Tailscale mesh hits http://100.64.0.10:8080 directly
+  #      to view /runtime-metrics/cost without SSH.
+  # 2026-05-06: previously bound to "100.64.0.10" only — Microsoft got 502 on
+  # every webhook because Funnel forwards to 127.0.0.1 and nothing listened there.
+  # 0.0.0.0 covers both interfaces. Tailscale's network is private (only Alex's
+  # devices) and Funnel is the only public-internet path; this is not a new
+  # exposure.
+  host: "0.0.0.0"
+  port: 8080
+  # public URL via Tailscale Funnel (decision 2026-04-28: swapped from Cloudflare Tunnel
+  # because Alex doesn't own a domain; ts.net subdomain is persistent + free).
+  public_url: "https://your-funnel-hostname.example"
+
+claude:
+  model: "claude-sonnet-4-6"
+  max_tokens: 1024
+  enable_prompt_caching: true
+
+# Per-call-type max_tokens override (added 2026-05-06 per audits/
+# token_optimization_2026-05-06.md REC-4). Same lookup shape as model_routing.
+# Empty `default` means "fall through to claude.max_tokens" so the legacy
+# global ceiling stays in force. compose_email_to_tasks_judgment is capped
+# tighter because real P95 output is 284 tokens; 512 is 1.8x P95 with no
+# truncation risk and a tighter blast-radius cap on jailbreak attempts.
+# 2026-09-24: raised to 1024. The judge now writes its `reason` BEFORE its
+# decision (structured output, capabilities/inbox_to_task/compose.py), and
+# on long threads that reason alone ran past 512 on 17 of 27 staging
+# attempts. The jailbreak concern is moot: output is schema-constrained, so
+# a hijacked reply can't emit free prose. Tokens bill only when generated.
+max_tokens_routing:
+  compose_email_to_tasks_judgment: 1024
+
+# Model routing per call type (added 2026-05-06 per audits/model_audit_2026-05-06.md).
+# Composer calls (anything Kavi sends as a Kavi-voiced message) stay on Sonnet so
+# voice quality is preserved. Classifier calls (judgment-only, JSON-out) can run on
+# Haiku for ~5-10x cost savings without measurable accuracy regression.
+#
+# Staged rollout (2026-05-06): only `classify_action_intent` and `classify_qa_reply`
+# are flipped to Haiku TODAY. The other 5 classifiers (commented routes below) stay
+# on Sonnet until Alex has 24h of eval data on the first two. Flip them after
+# the weekly HTML-viewer open-coding pass shows no accuracy drop on the live pair.
+model_routing:
+  default: claude-sonnet-4-6
+  # Live Haiku trial — 2 classifier calls flipped 2026-05-06:
+  classify_action_intent: claude-haiku-4-5
+  # 2026-09-23 cost pass (docs/cost-story.md): yes/no "is this new task a
+  # repeat of one of the last ~25?" judge. 9% of spend on Sonnet; Haiku is 3x
+  # cheaper per token. Gate: inbox-to-task matrix + staging replay green.
+  check_semantic_duplicate: claude-haiku-4-5
+  # classify_qa_reply DELETED 2026-06-10 (intent-first dispatch rebuild).
+  # The reply intent parser stays on Sonnet (default): it owns multi-intent
+  # extraction + offer binding — the judgment the 2026-06-10 incident proved
+  # is quality-critical. Consider a Haiku trial only after matrix-green weeks.
+  # Staged-but-not-flipped (kept on Sonnet via default until 24h eval data lands):
+  # classify_correction: claude-haiku-4-5
+  # classify_self_check_reply: claude-haiku-4-5
+  # classify_pause_intent: claude-haiku-4-5
+  # classify_coordination_intent: claude-haiku-4-5
+  # parse_coordination_reply: claude-haiku-4-5
+
+graph:
+  user: "me"
+  subscription_lifetime_minutes: 4230  # ~70.5 hours, just under Graph's 72h cap
+  subscription_renewal_buffer_minutes: 60
+  mstodo_shared_list_id: "YOUR_MS_TODO_LIST_ID"
+
+bluebubbles:
+  # local URL on Kavi's Mac, served by BlueBubbles app
+  base_url: "http://127.0.0.1:1234"
+  # outgoing webhook from BlueBubbles back to kavi-runtime
+  inbound_webhook_path: "/imessage"
+
+imessage:
+  megha_phone: "+15555550101"
+  # Added 2026-06-02 evening alongside Sam-account-onboarding step.
+  # Routing today: Kavi 1:1 with Alex for default outbound. Once a
+  # Sam-only behavior fires (his task, his Q&A), Kavi resolves the
+  # recipient to max_phone. Group-chat shape is a future build — the
+  # pattern is "let real conversations show us where group is needed
+  # over time" rather than design it ahead of usage.
+  max_phone: "+15555550102"
+  chat_guid_prefix: "any;-;"
+  # Alex's own email addresses; emails FROM these get skipped (her own outbound mail).
+  # Graph fires /me/messages webhooks for both inbox and sent items, so this also handles
+  # the self-send duplicate-task pattern observed during testing 2026-04-28.
+  own_email_addresses:
+    - "alex.rivera@outlook.com"
+
+household:
+  # Household identity. Code reads these via kavi_runtime/household.py
+  # instead of hard-coding them. Phones are imessage.megha_phone /
+  # imessage.max_phone above. First email = the member's primary Microsoft
+  # mailbox; the rest are aliases. Fictional values; put real ones in
+  # your private config.yaml.
+  members:
+    megha:
+      emails: ["megha@example.com", "megha.alt@example.com"]
+    max:
+      emails: ["max@example.com", "max.alt@example.com"]
+  kavi_apple_id: "kavi@example.com"
+
+ops:
+  # Where Kavi's Mac lives on your private mesh (e.g. Tailscale). Used in
+  # alert emails ("Err log: ssh ...") and the realtime-kavi status verify.
+  kavi_ssh_host: "kavi@100.64.0.10"
+  kavi_tailnet_addr: "100.64.0.10"
+
+schedule:
+  # ISO local time, America/Los_Angeles assumed
+  # Reduced 2026-04-29 evening: was ["07:00","11:00","15:00","19:00"]; the 11/15/19 ticks
+  # were noise per Alex's eval. Morning digest + 21:00 rollup is the new shape.
+  periodic_summary_times: ["07:00"]
+  end_of_day_rollup: "21:00"
+  quiet_hours_start: "23:00"
+  quiet_hours_end: "07:00"
+  correction_pattern_check_every_hours: 6
+  # Stage 4 (added 2026-05-04): Friday weekly self-check. Send time is Pacific local;
+  # timeout drives the Saturday-tick that writes a no_reply row if Alex didn't reply.
+  weekly_self_check_send_time: "14:00"
+  weekly_self_check_timeout_hours: 24
+
+guardrails:
+  # Step 12 (shipped 2026-04-29). Three active guardrails:
+  monthly_anthropic_spend_usd_cap: 30   # 2x expected ~$15/mo. Trip pauses auto-runs.
+  # Resume backlog drain (2026-09-23): only mail from the last N days is
+  # processed; held accounts stay queued untouched (Sam until re-auth).
+  drain_max_age_days: 7
+  drain_hold_accounts:
+    - sam.chen@outlook.com
+  webhook_flood_per_hour: 50            # Trip throttles to 1/min via deferred queue.
+  per_call_input_token_cap: 50000       # Trip halts that one Sonnet call only.
+  # Deferred to step 14 (need correction-baseline data to calibrate thresholds):
+  false_positive_window_days: 7
+  false_positive_rate_pause_threshold: 0.50
+  repeat_error_pause_threshold: 3
+  # Dropped 2026-04-29: max_kavi_messages_per_day. Was a UX/batching preference, not
+  # a safety net (Kavi's job is to message Alex; webhook flood throttle covers spam).
+
+priority_senders:
+  # exact-match email addresses or display-name fragments. Empty by default; learned via
+  # household.md Examples + Q&A patterns. Seeded with Jordan Lee per v0.2 PRD.
+  - "Jordan Lee"
+
+learning:
+  correction_threshold_for_proposal: 2
+  correction_threshold_after_rejection: 3
+
+action_layer:
+  # Live execution mode (flipped from dry_run=true to false 2026-05-05 evening,
+  # after Alex approved live mark-done alongside the new LLM-driven title match
+  # and the action-layer-always-replies serialization fix). Action-intent
+  # decisions still log to eval_persona_action_intent_jsonl. The classifier
+  # remains conservative (high confidence + LLM-judged title match required);
+  # ambiguous matches do NOT execute, they reply with a clarifying question.
+  dry_run: false
+
+# Inbox pre-filter (added 2026-05-06 per audits/token_optimization_2026-05-06.md
+# REC-1). SHADOW MODE today: matches log to <paths.runtime_events_jsonl dir>/inbox_pre_filter_ (was runtime_metrics/inbox_pre_filter_ until 2026-09-23)
+# shadow.jsonl alongside the LLM's actual decision; the LLM still runs. After
+# 7 days of clean shadow data Alex promotes by setting `shadow_mode: false`,
+# which makes the pre-filter actually skip the LLM and write a synthetic
+# `skipped` row to eval-inbox-judgments.jsonl (same shape as a hard-rule skip).
+inbox_pre_filter:
+  shadow_mode: true
+  # Keep list (approved by Alex 2026-09-24). A match overrides every filter
+  # rule: the email always reaches the LLM judge. Built from shadow data
+  # where the filter would have dropped emails the judge turned into tasks.
+  # Deliberately NOT kept: LinkedIn connection invitations. Theo's address is
+  # not listed by name (Alex 2026-09-24); personal_domains covers it anyway.
+  keep:
+    sender_domains:
+      - maplewoodschool.org   # school
+      - mybrightwheel.com        # childcare
+      - brightwheel.com
+      - your-insurer.com          # health insurance
+    sender_substrings:
+      - mychart                  # healthcare portals (mychart.org, mychart.<system>.org)
+    sender_addresses:
+      - alex.rivera@outlook.com    # household forwards
+      - alex.rivera@gmail.com
+      - sam.chen@outlook.com
+      - samchen.alias@outlook.com
+      - hit-reply@linkedin.com   # LinkedIn person-to-person
+      - inmail-hit-reply@linkedin.com
+      - messaging-digest-noreply@linkedin.com
+      - messages-noreply@linkedin.com
+    personal_domains:            # a person, often via a school parent list
+      - gmail.com
+      - outlook.com
+      - hotmail.com
+      - icloud.com
+      - me.com
+      - yahoo.com
+    subject_patterns:            # order status, bills, school admin
+      - "ready for pickup"
+      - "out for delivery"
+      - "has shipped"
+      - "been delivered"
+      - "shipment arriving"
+      - "order #"
+      - "update (on|to) your .{0,40}(order|#)"
+      - "order.{0,20}(confirmed|canceled|cancelled)"
+      - "invoice"
+      - "action needed"
+      - "child care|preschool|tuition"
+      - "re-?enroll"
+
+healthcheck:
+  # Dead-man's-switch (added 2026-05-05). Runtime pings this URL every 5 min;
+  # if pings stop, healthchecks.io emails Alex within ~15 min instead of the
+  # ~12h discovery delay seen in the 2026-05-04 BB outage.
+  # Setup: register at https://healthchecks.io (free), create a check with
+  # period=5min + grace=15min, paste the unique ping URL below, restart runtime
+  # via `launchctl kickstart -k gui/501/com.example.kavi`. Leave null to disable.
+  url: "null  # your healthchecks.io ping URL"
+
+# Email judge routing (not wired yet). Cheap model by default; the strong
+# model for replies/forwards, keep-list senders and strong_senders, plus a
+# strong-model second look when the cheap model skips a matching subject.
+inbox_to_task:
+  judge_routing:
+    strong_on_reply_or_forward: true
+    strong_senders:
+      - maplestreetschool.org
+      - lakeviewswim.example.com
+    second_look_subjects:
+      - "just messaged you"
+      - "\\bshipped\\b|\\bdelivered\\b"
+      - "security alert"
+
+# Known, accepted health violations that must not block a deploy
+# (verify_deploy.sh step 3). Each needs an expiry date.
+deploy:
+  accepted_health_violations: []
+  # - account: sam.chen@outlook.com
+  #   until: "2026-10-01"
+  #   reason: "mailbox sign-in expired; waiting on a reconnect"

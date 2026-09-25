@@ -1,0 +1,9 @@
+{
+  "mcpServers": {
+    "ms365": {
+      "type": "stdio",
+      "command": "npx",
+      "args": ["-y", "@softeria/ms-365-mcp-server@0.85.1", "--preset", "mail,tasks"]
+    }
+  }
+}

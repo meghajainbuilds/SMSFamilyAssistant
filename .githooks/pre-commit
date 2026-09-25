@@ -1,0 +1,3 @@
+#!/bin/sh
+# Leak guard: block commits that contain private names or secrets.
+exec python3 "$(git rev-parse --show-toplevel)/scripts/leak_scan.py" --staged

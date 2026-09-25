@@ -1,0 +1,1564 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>Kavi trace viewer — open coding</title>
+<style>
+  :root {
+    --bg: #fafafa;
+    --fg: #1a1a1a;
+    --muted: #666;
+    --accent: #2563eb;
+    --pass: #16a34a;
+    --fail: #dc2626;
+    --warn: #d97706;
+    --card: #fff;
+    --border: #e5e5e5;
+    --code-bg: #f3f4f6;
+    --inbound-bg: #eff6ff;
+    --outbound-bg: #f0fdf4;
+    --kavi-init-bg: #fef3c7;
+    --turn-divider: #d1d5db;
+  }
+  * { box-sizing: border-box; }
+  body {
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+    font-size: 14px;
+    line-height: 1.55;
+    color: var(--fg);
+    background: var(--bg);
+    margin: 0;
+    padding: 0;
+  }
+  header {
+    position: sticky;
+    top: 0;
+    z-index: 10;
+    background: #fff;
+    border-bottom: 1px solid var(--border);
+    padding: 12px 24px;
+    display: flex;
+    align-items: center;
+    gap: 16px;
+    flex-wrap: wrap;
+  }
+  header h1 { font-size: 16px; margin: 0; font-weight: 600; }
+  header .right {
+    margin-left: auto;
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    flex-wrap: wrap;
+  }
+  button, select {
+    font-size: 13px;
+    padding: 6px 12px;
+    border: 1px solid var(--border);
+    border-radius: 6px;
+    background: #fff;
+    cursor: pointer;
+  }
+  button:hover { background: #f5f5f5; }
+  button.primary {
+    background: var(--accent);
+    color: #fff;
+    border-color: var(--accent);
+  }
+  button.primary:hover { background: #1d4ed8; }
+  button:disabled { opacity: 0.5; cursor: not-allowed; }
+  input[type="file"] { font-size: 13px; }
+  main {
+    max-width: 980px;
+    margin: 0 auto;
+    padding: 24px;
+  }
+  .card {
+    background: var(--card);
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    padding: 16px 20px;
+    margin-bottom: 12px;
+  }
+  .session-header {
+    background: #1e293b;
+    color: #fff;
+    border: none;
+    padding: 14px 20px;
+  }
+  .session-header .meta-row { color: #cbd5e1; }
+  .session-header .meta-row b { color: #fff; }
+  .meta-row {
+    display: flex;
+    gap: 20px;
+    flex-wrap: wrap;
+    color: var(--muted);
+    font-size: 12px;
+    margin-bottom: 8px;
+  }
+  .meta-row b { color: var(--fg); font-weight: 500; }
+  .trace-id, .session-id {
+    font-family: ui-monospace, "SF Mono", Menlo, monospace;
+    font-size: 11px;
+    color: var(--muted);
+  }
+  .section-label {
+    font-size: 11px;
+    text-transform: uppercase;
+    letter-spacing: 0.06em;
+    color: var(--muted);
+    font-weight: 600;
+    margin-bottom: 6px;
+  }
+  .msg-divider {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    margin: 16px 0 6px 0;
+  }
+  .msg-divider::before, .msg-divider::after {
+    content: "";
+    flex: 1;
+    border-top: 1px solid var(--turn-divider);
+  }
+  .msg-label {
+    background: var(--turn-divider);
+    color: var(--fg);
+    font-size: 11px;
+    text-transform: uppercase;
+    letter-spacing: 0.06em;
+    font-weight: 600;
+    padding: 3px 12px;
+    border-radius: 999px;
+  }
+  .inbound { background: var(--inbound-bg); border-color: #bfdbfe; }
+  .outbound { background: var(--outbound-bg); border-color: #bbf7d0; }
+  .outbound.kavi-init { background: var(--kavi-init-bg); border-color: #fcd34d; }
+  .msg-text {
+    font-size: 15px;
+    white-space: pre-wrap;
+    word-wrap: break-word;
+    margin: 4px 0;
+  }
+  .checks {
+    display: flex;
+    gap: 12px;
+    flex-wrap: wrap;
+    font-size: 11px;
+    margin-top: 8px;
+  }
+  .check { padding: 2px 8px; border-radius: 4px; }
+  .check.pass { background: #dcfce7; color: #15803d; }
+  .check.fail { background: #fee2e2; color: #991b1b; font-weight: 600; }
+  .check.skip { background: #f3f4f6; color: var(--muted); }
+  details { margin-top: 10px; }
+  details summary {
+    cursor: pointer;
+    color: var(--accent);
+    font-size: 12px;
+    user-select: none;
+  }
+  details summary:hover { text-decoration: underline; }
+  pre.code {
+    background: var(--code-bg);
+    padding: 12px;
+    border-radius: 6px;
+    overflow-x: auto;
+    font-size: 11px;
+    line-height: 1.45;
+    margin: 8px 0 0 0;
+    white-space: pre-wrap;
+    word-wrap: break-word;
+  }
+  .notes-card {
+    background: #fffbeb;
+    border-color: #fcd34d;
+    position: sticky;
+    bottom: 12px;
+  }
+  textarea.notes {
+    width: 100%;
+    min-height: 140px;
+    font-family: inherit;
+    font-size: 14px;
+    padding: 12px;
+    border: 1px solid var(--border);
+    border-radius: 6px;
+    resize: vertical;
+    background: #fff;
+  }
+  textarea.notes:focus {
+    outline: 2px solid var(--accent);
+    outline-offset: -1px;
+  }
+  textarea.notes::placeholder { color: #a8a29e; font-style: italic; }
+  .notes-meta {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-top: 8px;
+    font-size: 12px;
+    color: var(--muted);
+  }
+  .save-status { font-style: italic; }
+  .save-status.saved { color: var(--pass); }
+  .empty-state {
+    text-align: center;
+    padding: 80px 24px;
+    color: var(--muted);
+  }
+  .empty-state h2 { font-weight: 500; }
+  .llm-call, .tool-call {
+    background: var(--code-bg);
+    padding: 8px 12px;
+    border-radius: 6px;
+    margin: 6px 0;
+    font-size: 12px;
+  }
+  .llm-call b, .tool-call b { font-family: ui-monospace, monospace; }
+  .nav-info {
+    color: var(--muted);
+    font-size: 13px;
+    min-width: 130px;
+    text-align: center;
+  }
+  .jump-form {
+    display: inline-flex;
+    gap: 6px;
+    align-items: center;
+  }
+  .jump-form input {
+    width: 60px;
+    padding: 6px 8px;
+    border: 1px solid var(--border);
+    border-radius: 6px;
+    font-size: 13px;
+  }
+  .badge {
+    display: inline-block;
+    font-size: 10px;
+    font-weight: 600;
+    padding: 2px 8px;
+    border-radius: 999px;
+    margin-left: 6px;
+    text-transform: uppercase;
+    letter-spacing: 0.04em;
+  }
+  .badge.multi { background: var(--warn); color: #fff; }
+  .badge.kavi-init { background: #d97706; color: #fff; }
+  .badge.megha-init { background: var(--accent); color: #fff; }
+  .badge.data-gap { background: #b45309; color: #fff; }
+  /* Inbox decision badges */
+  .badge.decision { font-size: 11px; padding: 3px 10px; }
+  .badge.decision.skip { background: #6b7280; color: #fff; }
+  .badge.decision.create { background: var(--pass); color: #fff; }
+  .badge.decision.dedup_hit { background: #94a3b8; color: #fff; }
+  .badge.decision.updated { background: var(--accent); color: #fff; }
+  /* Quick-tag bar (inbox view only) */
+  .quicktag-bar {
+    background: #fff;
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    padding: 12px 16px;
+    margin-bottom: 12px;
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+  }
+  .quicktag-row {
+    display: flex;
+    gap: 8px;
+    flex-wrap: wrap;
+    align-items: center;
+  }
+  .quicktag-btn {
+    background: #f3f4f6;
+    border: 1px solid var(--border);
+    border-radius: 6px;
+    padding: 6px 10px;
+    font-size: 12px;
+    cursor: pointer;
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    max-width: 280px;
+  }
+  .quicktag-btn:hover { background: #e5e7eb; }
+  .quicktag-btn .key {
+    background: #1e293b;
+    color: #fff;
+    font-family: ui-monospace, "SF Mono", Menlo, monospace;
+    font-size: 10px;
+    padding: 1px 5px;
+    border-radius: 3px;
+    font-weight: 600;
+  }
+  .quicktag-btn .label {
+    text-overflow: ellipsis;
+    overflow: hidden;
+    white-space: nowrap;
+    max-width: 230px;
+  }
+  .quicktag-edit-row {
+    display: flex;
+    gap: 6px;
+    align-items: center;
+    font-size: 12px;
+    color: var(--muted);
+  }
+  .quicktag-edit-row select, .quicktag-edit-row input[type="text"] {
+    font-size: 12px;
+    padding: 4px 8px;
+    border: 1px solid var(--border);
+    border-radius: 4px;
+  }
+  .quicktag-edit-row input[type="text"] { flex: 1; min-width: 250px; }
+  .quicktag-actions {
+    display: flex;
+    gap: 8px;
+    align-items: center;
+    border-top: 1px dashed var(--border);
+    padding-top: 8px;
+    font-size: 12px;
+  }
+  .quicktag-actions select {
+    font-size: 12px;
+    padding: 4px 8px;
+    border: 1px solid var(--border);
+    border-radius: 4px;
+  }
+  .quicktag-actions button {
+    font-size: 12px;
+    padding: 4px 10px;
+  }
+  .quicktag-actions .apply-all {
+    background: #fef3c7;
+    border-color: #fbbf24;
+    color: #78350f;
+    font-weight: 600;
+  }
+  .quicktag-actions .apply-all:hover { background: #fde68a; }
+  .quicktag-actions .muted { color: var(--muted); }
+  /* Inbox card */
+  .inbox-card { padding: 18px 22px; }
+  .inbox-card .top-strip {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    color: var(--muted);
+    font-size: 12px;
+    margin-bottom: 10px;
+  }
+  .inbox-card .subject {
+    font-size: 18px;
+    font-weight: 600;
+    margin: 4px 0 6px 0;
+    line-height: 1.35;
+  }
+  .inbox-card .sender {
+    font-size: 13px;
+    color: var(--muted);
+    margin-bottom: 12px;
+  }
+  .inbox-card .decision-row {
+    display: flex;
+    gap: 10px;
+    align-items: center;
+    flex-wrap: wrap;
+    margin: 10px 0;
+    font-size: 13px;
+  }
+  .inbox-card .task-title {
+    background: #f9fafb;
+    border-left: 3px solid var(--accent);
+    padding: 8px 12px;
+    margin: 10px 0;
+    font-size: 14px;
+  }
+  .inbox-card .action-statement {
+    background: #f0f9ff;
+    border-left: 3px solid var(--accent);
+    padding: 8px 12px;
+    margin: 10px 0;
+    font-size: 13px;
+    color: #1e3a5f;
+    font-weight: 500;
+  }
+  .inbox-card .action-statement.skip { background: #f9fafb; border-left-color: #6b7280; color: #374151; }
+  .inbox-card .action-statement.create { background: #f0fdf4; border-left-color: var(--pass); color: #14532d; }
+  .inbox-card .action-statement.dedup_hit { background: #f8fafc; border-left-color: #94a3b8; color: #1e293b; }
+  .inbox-card .action-statement.updated { background: #eff6ff; border-left-color: var(--accent); color: #1e3a5f; }
+  .inbox-card .reason {
+    font-style: italic;
+    color: #374151;
+    background: #fafafa;
+    border-left: 2px solid var(--border);
+    padding: 8px 12px;
+    margin: 10px 0;
+    white-space: pre-wrap;
+  }
+  .inbox-card .pkg-marker {
+    background: #eff6ff;
+    border: 1px solid #bfdbfe;
+    border-radius: 6px;
+    padding: 6px 10px;
+    font-size: 12px;
+    color: #1e40af;
+    margin-top: 8px;
+    font-family: ui-monospace, "SF Mono", Menlo, monospace;
+  }
+  .data-gap-banner {
+    background: #fef3c7;
+    border: 1px solid #fbbf24;
+    border-radius: 8px;
+    padding: 12px 16px;
+    margin-bottom: 12px;
+    color: #78350f;
+    font-size: 13px;
+  }
+  .data-gap-banner b { color: #78350f; }
+  .filter-bar {
+    display: flex;
+    gap: 8px;
+    align-items: center;
+    font-size: 12px;
+    color: var(--muted);
+  }
+  .filter-bar label {
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+    cursor: pointer;
+  }
+</style>
+</head>
+<body>
+<header>
+  <h1 id="viewerTitle">Kavi trace viewer</h1>
+  <input type="file" id="filePicker" accept=".jsonl,.json,.txt">
+  <div class="filter-bar" id="filterBar">
+    <label><input type="checkbox" id="filterMulti"> multi-msg only</label>
+  </div>
+  <div class="right">
+    <button id="prevBtn" disabled>‹ Prev</button>
+    <span class="nav-info" id="navInfo">no sessions loaded</span>
+    <button id="nextBtn" disabled>Next ›</button>
+    <span class="jump-form">
+      <label for="jumpInput" style="font-size:12px;color:var(--muted);">Jump:</label>
+      <input type="number" id="jumpInput" min="1" placeholder="#">
+    </span>
+    <button id="backupNotesBtn" disabled title="Download all notes as JSON for safekeeping">Backup notes</button>
+    <button class="primary" id="exportBtn" disabled>Export CSV</button>
+  </div>
+</header>
+
+<main id="main">
+  <div class="empty-state" id="emptyState">
+    <h2>Load a week JSONL to begin</h2>
+    <p>Use the file picker above to load <code>eval-persona-week&lt;N&gt;.jsonl</code> for iMessage sessions, or <code>eval-inbox-week&lt;N&gt;.jsonl</code> for email decisions.</p>
+    <p style="font-size:12px;">The viewer auto-detects which surface to render from the first row's shape (<code>session_id</code> → persona view, <code>email_id</code> → inbox view). One unit per page; notes auto-save to localStorage. Click <b>Export CSV</b> when done for axial coding in Sheets.</p>
+    <p style="font-size:12px;color:var(--muted);">Open codes: name the <b>upstream root cause</b> of any failure (persona: cite messages by #N; inbox: cite the specific email field that misled the decision). If clean, write "clean" or leave blank.</p>
+  </div>
+</main>
+
+<script>
+const STORAGE_PREFIX = "kavi_session_notes::";   // persona notes (keyed by session_id)
+const INBOX_STORAGE_PREFIX = "kavi_inbox_notes::"; // inbox notes (keyed by row_id)
+const SOURCE_FILE_KEY = "kavi_trace_source_file";
+const QUICKTAG_STORAGE_KEY = "kavi_inbox_quicktags_v1";
+const DEFAULT_QUICKTAGS = [
+  "correctly skipped — marketing/promo",
+  "correctly skipped — newsletter (no ask)",
+  "correctly created — clear ask",
+  "wrong: should have been skipped",
+  "wrong: should have been created",
+  "wrong owner",
+];
+const MAX_QUICKTAGS = 9;  // keyboard shortcuts cap at digits 1-9
+let quickTags = DEFAULT_QUICKTAGS.slice();
+let inboxDecisionFilter = "all";  // "all" | "skip" | "create" | "dedup_hit" | "updated"
+
+// Plain-English labels + action statements for inbox decision badges. The
+// raw `decision` values come from the runtime; these are PM-facing renames
+// so cards read in family-impact terms, not engineering terms.
+const DECISION_LABELS = {
+  skip: "Skipped",
+  create: "Created task",
+  dedup_hit: "Duplicate suppressed",
+  updated: "Updated existing task",
+};
+const DECISION_ACTIONS = {
+  skip: "Kavi did not create a task. No action taken.",
+  create: "Kavi created a task in MS To Do.",
+  dedup_hit: "Kavi did not create a task — an open task already covers this email.",
+  updated: "Kavi updated an existing task in MS To Do (no new task created).",
+};
+
+// `surface` switches the whole render pipeline between the persona session
+// view (unchanged from week-1) and the inbox per-decision view. It's set by
+// `loadFile` based on the shape of the first row in the JSONL.
+let surface = null;          // "persona" | "inbox" | null
+
+let allSessions = [];        // persona: raw from JSONL (one row per session)
+let visibleSessions = [];    // persona: filtered subset
+let allInboxRows = [];       // inbox: raw from JSONL (one row per email decision)
+let visibleInboxRows = [];   // inbox: same as allInboxRows for now (no filter)
+let currentIdx = 0;
+let filterMultiOnly = false;
+
+const $ = (id) => document.getElementById(id);
+
+function escapeHtml(str) {
+  if (str == null) return "";
+  return String(str)
+    .replace(/&/g, "&amp;")
+    .replace(/</g, "&lt;")
+    .replace(/>/g, "&gt;")
+    .replace(/"/g, "&quot;")
+    .replace(/'/g, "&#39;");
+}
+
+function formatPT(utcIso) {
+  if (!utcIso) return "";
+  try {
+    const d = new Date(utcIso);
+    return d.toLocaleString("en-US", {
+      timeZone: "America/Los_Angeles",
+      month: "short", day: "numeric",
+      hour: "numeric", minute: "2-digit",
+      hour12: true,
+    }) + " PT";
+  } catch (e) { return utcIso; }
+}
+
+function formatPTTime(utcIso) {
+  if (!utcIso) return "";
+  try {
+    const d = new Date(utcIso);
+    return d.toLocaleString("en-US", {
+      timeZone: "America/Los_Angeles",
+      hour: "numeric", minute: "2-digit", second: "2-digit",
+      hour12: true,
+    });
+  } catch (e) { return utcIso; }
+}
+
+function checkBadge(name, value) {
+  if (value === true) return `<span class="check pass">✓ ${name}</span>`;
+  if (value === false) return `<span class="check fail">✗ ${name}</span>`;
+  return `<span class="check skip">— ${name}</span>`;
+}
+
+function renderStructuralChecks(checks) {
+  if (!checks) return "";
+  const order = [
+    "g_v1_120char", "g_v2_prose", "g_v3_functional_emojis",
+    "g_v4_first_person", "g_v5_no_signoff",
+    "g_p1_no_status_board", "g_p2_no_warmth_opener", "g_p3_no_dead_reply_syntax",
+  ];
+  const labels = {
+    g_v1_120char: "≤120ch", g_v2_prose: "prose", g_v3_functional_emojis: "func-emoji",
+    g_v4_first_person: "1st-person", g_v5_no_signoff: "no-signoff",
+    g_p1_no_status_board: "no-statusboard", g_p2_no_warmth_opener: "no-warmth",
+    g_p3_no_dead_reply_syntax: "no-dead-syntax",
+  };
+  return `<div class="checks">${order.map(k => checkBadge(labels[k], checks[k])).join("")}</div>`;
+}
+
+function renderLLMCalls(calls) {
+  if (!calls || calls.length === 0) return "";
+  return calls.map(c => {
+    const tokens = c.input_tokens != null
+      ? `${c.input_tokens}→${c.output_tokens} tok`
+      : "(tokens not captured)";
+    const cache = (c.cache_read_input_tokens || c.cache_creation_input_tokens)
+      ? ` <span style="color:var(--muted);">cache: ${c.cache_read_input_tokens||0}r/${c.cache_creation_input_tokens||0}w</span>`
+      : "";
+    return `<div class="llm-call">
+      <b>${escapeHtml(c.call_type || "?")}</b> · ${tokens}${cache}
+    </div>`;
+  }).join("");
+}
+
+function renderToolCalls(calls) {
+  if (!calls || calls.length === 0) return "<div style='color:var(--muted);font-size:12px;'>(no tool calls recorded)</div>";
+  return calls.map(c => {
+    const ok = c.result?.ok;
+    const okBadge = ok === true ? "✓" : ok === false ? "✗" : "?";
+    const argsStr = Object.entries(c.args || {})
+      .map(([k, v]) => `${k}=${typeof v === "string" ? v.slice(0, 60) : JSON.stringify(v).slice(0,60)}`)
+      .join(", ");
+    return `<div class="tool-call">
+      ${okBadge} <b>${escapeHtml(c.tool || "?")}</b>
+      ${argsStr ? `<span style="color:var(--muted);">(${escapeHtml(argsStr)})</span>` : ""}
+      ${c.result?.dedup_hit ? ' <span class="check skip">dedup-hit</span>' : ""}
+    </div>`;
+  }).join("");
+}
+
+function renderMessage(msg, idx) {
+  const time = formatPTTime(msg.ts);
+  if (msg.kind === "inbound") {
+    return `
+      <div class="msg-divider"><span class="msg-label">#${idx} MEGHA · ${time}</span></div>
+      <div class="card inbound">
+        <div class="meta-row">
+          <span><b>from:</b> ${escapeHtml(msg.sender || "?")}</span>
+          <span><b>chars:</b> ${msg.char_count ?? "?"}</span>
+        </div>
+        <div class="msg-text">${escapeHtml(msg.text || "(empty)")}</div>
+      </div>
+    `;
+  } else {
+    const kavInit = !msg.triggered_by;
+    const cls = kavInit ? "outbound kavi-init" : "outbound";
+    const initBadge = kavInit ? `<span class="badge kavi-init">Kavi-initiated</span>` : "";
+    const flagBits = [];
+    if (msg.fallback_used) flagBits.push('<span style="color:var(--warn);"><b>fallback</b></span>');
+    if (msg.structural_pass === false) flagBits.push('<span style="color:var(--fail);"><b>structural FAIL</b></span>');
+    if (msg.verified === false) flagBits.push('<span style="color:var(--warn);"><b>not verified</b></span>');
+    return `
+      <div class="msg-divider"><span class="msg-label">#${idx} KAVI · ${time} · ${escapeHtml(msg.outbound_kind || "?")} ${initBadge}</span></div>
+      <div class="card ${cls}">
+        <div class="meta-row">
+          <span><b>chars:</b> ${msg.char_count ?? "?"}</span>
+          ${flagBits.join(" ")}
+        </div>
+        <div class="msg-text">${escapeHtml(msg.text || "(empty)")}</div>
+        ${renderStructuralChecks(msg.structural_checks)}
+        <details>
+          <summary>LLM + tool calls</summary>
+          <div style="margin-top:8px;">
+            ${renderLLMCalls(msg.llm_calls)}
+            ${renderToolCalls(msg.tool_calls)}
+          </div>
+        </details>
+      </div>
+    `;
+  }
+}
+
+function renderSession(session) {
+  const isMulti = session.session_size > 1;
+  const initBadge = session.initiator === "kavi"
+    ? `<span class="badge kavi-init">Kavi-initiated</span>`
+    : `<span class="badge megha-init">Megha-initiated</span>`;
+  const multiBadge = isMulti ? `<span class="badge multi">${session.session_size} messages</span>` : "";
+  const gapBadge = session.data_gap_suspected ? `<span class="badge data-gap">data gap</span>` : "";
+
+  const gapBanner = session.data_gap_suspected ? `
+    <div class="data-gap-banner">
+      <b>⚠️ Data gap suspected.</b> ${escapeHtml(session.data_gap_reason || "Inbound rows likely missing.")}
+      The Kavi messages below read like replies, but the inbound that triggered them isn't in <code>eval-persona-inbound.jsonl</code> on Kavi. Context for this session is incomplete — your note can still flag whatever you can see, but treat this as evidence the inbound logger was lossy before its deploy date (or has a separate bug). Going-forward instrumentation (Phase B trace_log.py) writes inbound + outbound atomically so this can't recur.
+    </div>
+  ` : "";
+
+  return `
+    <div class="card session-header">
+      <div style="display:flex;align-items:center;gap:8px;margin-bottom:6px;">
+        <span style="font-size:13px;text-transform:uppercase;letter-spacing:0.06em;font-weight:600;">Session ${currentIdx + 1} / ${visibleSessions.length}</span>
+        ${initBadge}
+        ${multiBadge}
+        ${gapBadge}
+      </div>
+      <div class="meta-row">
+        <span><b>id:</b> <span class="session-id" style="color:#94a3b8;">${escapeHtml(session.session_id)}</span></span>
+        <span><b>start:</b> ${formatPT(session.first_ts)}</span>
+        <span><b>end:</b> ${formatPT(session.last_ts)}</span>
+        <span><b>participants:</b> ${escapeHtml((session.participants || []).join(", "))}</span>
+      </div>
+      <div style="font-size:11px;color:#cbd5e1;margin-top:6px;">${escapeHtml(session.decision_summary || "")}</div>
+    </div>
+
+    ${gapBanner}
+
+    ${session.messages.map((m, i) => renderMessage(m, i + 1)).join("")}
+
+    <div class="card notes-card">
+      <div class="section-label">OPEN-CODING NOTE (session-level)</div>
+      <textarea
+        class="notes"
+        id="notesArea"
+        placeholder="What was the first / most upstream thing wrong in this session?
+
+Specific, not 'janky.' If a downstream message made the failure visible, cite which message (#N) and tie back to the upstream root cause.
+
+Example: '#1: Kavi auto-created a task without confirming AND used wordy format. #2: Megha called out both. #3-6: iterations around the same upstream root cause (composer fires create_task before clarifying intent).'
+
+If the session looks clean, write 'clean' or leave blank."
+      ></textarea>
+      <div class="notes-meta">
+        <span class="save-status" id="saveStatus">unsaved</span>
+        <span>Click outside the textarea to save · localStorage keyed by session_id</span>
+      </div>
+    </div>
+  `;
+}
+
+function renderInboxRow(row) {
+  // One card per email decision. Header strip: ts_pt left, source_account
+  // right. Subject + sender below. Decision badge color-coded. Reason in an
+  // italic block. Free-form open-code textarea at the bottom (same
+  // localStorage behavior as persona view, but keyed by row_id).
+  const decision = row.decision || "skip";
+  const decisionClass = `decision ${decision}`;
+  const owner = row.owner || "—";
+  const confidence = row.confidence || "—";
+  const showTask = decision === "create" || decision === "dedup_hit" || decision === "updated";
+  let taskTitleBlock = "";
+  if (showTask) {
+    const t = row.task_title || "(no task title)";
+    taskTitleBlock = `<div class="task-title"><b>Task:</b> ${escapeHtml(t)}</div>`;
+  } else if (row.task_title) {
+    // Some skip rows surface a "proposed_title" — show it muted so Megha can
+    // see what Kavi *would* have created.
+    taskTitleBlock = `<div class="task-title" style="border-left-color:var(--muted);color:var(--muted);"><b>Proposed (skipped):</b> ${escapeHtml(row.task_title)}</div>`;
+  }
+  let pkgBlock = "";
+  if (decision === "dedup_hit" || decision === "updated") {
+    const tier = row.package_match_tier || "—";
+    const target = row.merge_target_task_id || row.matched_task_id || "—";
+    pkgBlock = `<div class="pkg-marker">🔗 package match: ${escapeHtml(tier)} · merge → ${escapeHtml(target)}</div>`;
+  }
+
+  // Matched existing task block — only for Duplicate Suppressed + Updated.
+  // Runtime started logging matched_task_title and matched_task_id on
+  // 2026-05-28 (commit fb1b7ce). Older rows have nulls; we render a
+  // distinct placeholder so Megha can tell pre-fix from post-fix at a
+  // glance. Manually-backfilled rows carry match_source="manual-backfill"
+  // and a possible match_note for the "matched task no longer exists"
+  // case.
+  let matchedBlock = "";
+  if (decision === "dedup_hit" || decision === "updated") {
+    if (row.matched_task_title) {
+      const src = row.match_source === "manual-backfill-2026-05-28"
+        ? ' <span style="color:var(--muted);font-size:11px;font-style:italic;">(manually backfilled)</span>'
+        : '';
+      matchedBlock = `<div class="task-title" style="border-left-color:var(--warn);">
+        <b>Matched existing task:</b> ${escapeHtml(row.matched_task_title)}${src}
+        ${row.matched_task_id ? `<div style="font-size:11px;color:var(--muted);font-family:ui-monospace,'SF Mono',Menlo,monospace;margin-top:4px;">id: …${escapeHtml(String(row.matched_task_id).slice(-30))}</div>` : ""}
+      </div>`;
+    } else if (row.match_note) {
+      matchedBlock = `<div class="task-title" style="border-left-color:var(--muted);color:var(--muted);">
+        <b>Matched existing task:</b> ${escapeHtml(row.match_note)}
+      </div>`;
+    } else {
+      matchedBlock = `<div class="task-title" style="border-left-color:var(--muted);color:var(--muted);font-style:italic;">
+        Matched existing task: <span style="font-style:normal;">(not logged — pre-2026-05-28 row)</span>
+      </div>`;
+    }
+  }
+  const backfillBadge = row.backfill_source
+    ? `<span class="badge data-gap" title="this row came from the ${escapeHtml(row.backfill_source)} backfill">backfill</span>`
+    : "";
+
+  const decisionLabel = DECISION_LABELS[decision] || decision;
+  const actionText = DECISION_ACTIONS[decision] || "";
+  const actionBlock = actionText
+    ? `<div class="action-statement ${decision}">${escapeHtml(actionText)}</div>`
+    : "";
+
+  return `
+    <div class="card inbox-card">
+      <div class="top-strip">
+        <span><b>${escapeHtml(row.ts_pt || "")}</b></span>
+        <span>${escapeHtml(row.source_account || "")} ${backfillBadge}</span>
+      </div>
+      <div class="subject">${escapeHtml(row.subject || "(no subject)")}</div>
+      <div class="sender">From: ${escapeHtml(row.sender || "?")}</div>
+      <div class="decision-row">
+        <span class="badge ${decisionClass}">${escapeHtml(decisionLabel)}</span>
+        ${showTask ? `<span><b>Owner:</b> ${escapeHtml(owner)}</span>` : ""}
+        ${showTask ? `<span><b>Confidence:</b> ${escapeHtml(confidence)}</span>` : ""}
+        <span class="trace-id" style="margin-left:auto;">${escapeHtml(row.row_id || "")}</span>
+      </div>
+      ${actionBlock}
+      ${taskTitleBlock}
+      ${matchedBlock}
+      ${row.reason ? `<div class="reason">${escapeHtml(row.reason)}</div>` : ""}
+      ${pkgBlock}
+    </div>
+
+    <div class="card notes-card">
+      <div class="section-label">OPEN-CODING NOTE (decision-level)</div>
+      <textarea
+        class="notes"
+        id="notesArea"
+        style="min-height: 110px;"
+        placeholder="What was the most upstream thing wrong with this decision?
+
+Specific. Cite the email field that misled Kavi if you can (subject line keyword, sender pattern, missing context). If the decision is right, write 'clean' or leave blank.
+
+Examples:
+- 'wrong: Kavi created a task from a promo email because subject contained the word \\'order\\'; sender pattern (@email.nordstrom.com) should have been a hard skip.'
+- 'right but wrong owner: should be max, not megha — sender is max's school district.'
+- 'clean'"
+      ></textarea>
+      <div class="notes-meta">
+        <span class="save-status" id="saveStatus">unsaved</span>
+        <span>Click outside the textarea to save · localStorage keyed by row_id</span>
+      </div>
+    </div>
+  `;
+}
+
+function applyFilter() {
+  if (surface === "inbox") {
+    if (inboxDecisionFilter === "all") {
+      visibleInboxRows = allInboxRows.slice();
+    } else {
+      visibleInboxRows = allInboxRows.filter(
+        r => (r.decision || "skip") === inboxDecisionFilter,
+      );
+    }
+    if (currentIdx >= visibleInboxRows.length) currentIdx = 0;
+    return;
+  }
+  visibleSessions = filterMultiOnly
+    ? allSessions.filter(s => (s.session_size || 0) > 1)
+    : allSessions.slice();
+  if (currentIdx >= visibleSessions.length) currentIdx = 0;
+}
+
+// ---------- quick-tag bar (inbox view only) ----------
+
+function loadQuickTags() {
+  try {
+    const raw = localStorage.getItem(QUICKTAG_STORAGE_KEY);
+    if (!raw) return;
+    const parsed = JSON.parse(raw);
+    if (Array.isArray(parsed)
+        && parsed.length >= 1 && parsed.length <= MAX_QUICKTAGS
+        && parsed.every(t => typeof t === "string" && t.trim().length > 0)) {
+      quickTags = parsed;
+    }
+  } catch (e) { /* keep defaults */ }
+}
+
+function saveQuickTags() {
+  localStorage.setItem(QUICKTAG_STORAGE_KEY, JSON.stringify(quickTags));
+}
+
+function countByDecision() {
+  const counts = {};
+  for (const r of allInboxRows) {
+    const d = r.decision || "skip";
+    counts[d] = (counts[d] || 0) + 1;
+  }
+  return counts;
+}
+
+function renderQuickTagBar() {
+  const buttons = quickTags.map((tag, i) => {
+    const safe = escapeHtml(tag);
+    return `<button class="quicktag-btn" data-tag-idx="${i}" title="${safe}">
+      <span class="key">${i + 1}</span>
+      <span class="label">${safe}</span>
+    </button>`;
+  }).join("");
+
+  const canAdd = quickTags.length < MAX_QUICKTAGS;
+  const canDelete = quickTags.length > 1;
+  const editOpts = quickTags.map((_, i) => `<option value="${i}">Tag ${i + 1}</option>`).join("")
+    + (canAdd ? `<option value="new">+ Add new tag</option>` : "");
+  const editRow = `
+    <div class="quicktag-edit-row" id="quicktagEditRow" style="display:none;">
+      <span>Edit / add</span>
+      <select id="quicktagEditSelect">${editOpts}</select>
+      <input type="text" id="quicktagEditInput" placeholder="canned open-code text">
+      <button id="quicktagSaveBtn">Save</button>
+      <button id="quicktagDeleteBtn" ${canDelete ? "" : "disabled"} title="${canDelete ? "Remove the selected tag" : "Need at least one tag"}">Delete</button>
+      <button id="quicktagResetBtn" title="Reset all tags to the 6 defaults">Reset to defaults</button>
+      <button id="quicktagCancelBtn">Cancel</button>
+    </div>`;
+
+  const c = countByDecision();
+  const filterOpts = [
+    ["all", `All (${allInboxRows.length})`],
+    ["skip", `Skipped (${c.skip || 0})`],
+    ["create", `Created task (${c.create || 0})`],
+    ["dedup_hit", `Duplicate suppressed (${c.dedup_hit || 0})`],
+    ["updated", `Updated existing task (${c.updated || 0})`],
+  ].map(([v, l]) => {
+    const sel = v === inboxDecisionFilter ? " selected" : "";
+    return `<option value="${v}"${sel}>${escapeHtml(l)}</option>`;
+  }).join("");
+
+  return `
+    <div class="quicktag-bar">
+      <div class="quicktag-row">
+        ${buttons}
+        <button id="quicktagEditBtn" style="margin-left:auto;font-size:12px;color:var(--muted);">Edit tags</button>
+      </div>
+      ${editRow}
+      <div class="quicktag-actions">
+        <span class="muted">Filter by decision:</span>
+        <select id="inboxDecisionFilter">${filterOpts}</select>
+        <button class="apply-all" id="applyAllBtn" title="Apply this card's note to every unlabeled card in the current filter (skips already-labeled cards)">Apply this note to all remaining in filter</button>
+        <span class="muted" id="quicktagHint" style="margin-left:auto;">Tip: press 1–${quickTags.length} to tag + advance · ← → to nav</span>
+      </div>
+    </div>
+  `;
+}
+
+function applyTagToCurrentCard(tagIdx) {
+  if (surface !== "inbox") return;
+  if (visibleInboxRows.length === 0) return;
+  const text = quickTags[tagIdx];
+  if (!text) return;
+  const row = visibleInboxRows[currentIdx];
+  localStorage.setItem(INBOX_STORAGE_PREFIX + row.row_id, text);
+  // Advance if not on last card.
+  if (currentIdx < visibleInboxRows.length - 1) currentIdx++;
+  render();
+  flashSaveStatus(`Tagged: "${text.length > 50 ? text.slice(0, 50) + '…' : text}"`);
+}
+
+function applyCurrentNoteToFilter() {
+  if (surface !== "inbox") return;
+  if (visibleInboxRows.length === 0) return;
+  const row = visibleInboxRows[currentIdx];
+  // Source-of-truth for current note: textarea if open, else storage.
+  const notesArea = document.getElementById("notesArea");
+  let text = notesArea ? notesArea.value.trim() : "";
+  if (!text) text = localStorage.getItem(INBOX_STORAGE_PREFIX + row.row_id) || "";
+  if (!text) {
+    flashSaveStatus("Current card has no note. Click a quick-tag or type one first.", true);
+    return;
+  }
+  if (!confirm(`Apply this note to all ${visibleInboxRows.length - 1} other cards in the current filter that don't already have a note?\n\nNote: "${text.length > 100 ? text.slice(0, 100) + '…' : text}"`)) {
+    return;
+  }
+  let applied = 0, skipped = 0;
+  for (const r of visibleInboxRows) {
+    if (r.row_id === row.row_id) continue;
+    const key = INBOX_STORAGE_PREFIX + r.row_id;
+    if (localStorage.getItem(key)) { skipped++; continue; }
+    localStorage.setItem(key, text);
+    applied++;
+  }
+  flashSaveStatus(`Applied to ${applied} unlabeled cards. Skipped ${skipped} already labeled.`);
+  render();
+}
+
+function wireQuickTagBar() {
+  // Tag buttons.
+  document.querySelectorAll(".quicktag-btn[data-tag-idx]").forEach(btn => {
+    btn.addEventListener("click", () => {
+      const idx = parseInt(btn.getAttribute("data-tag-idx"), 10);
+      if (!isNaN(idx)) applyTagToCurrentCard(idx);
+    });
+  });
+  // Edit-tags toggle.
+  const editBtn = document.getElementById("quicktagEditBtn");
+  const editRow = document.getElementById("quicktagEditRow");
+  if (editBtn && editRow) {
+    editBtn.addEventListener("click", () => {
+      const showing = editRow.style.display !== "none";
+      editRow.style.display = showing ? "none" : "flex";
+      if (!showing) {
+        const sel = document.getElementById("quicktagEditSelect");
+        const input = document.getElementById("quicktagEditInput");
+        if (sel && input) {
+          sel.value = "0";
+          input.value = quickTags[0] || "";
+          input.focus();
+        }
+      }
+    });
+  }
+  const editSel = document.getElementById("quicktagEditSelect");
+  const editInput = document.getElementById("quicktagEditInput");
+  if (editSel && editInput) {
+    editSel.addEventListener("change", () => {
+      if (editSel.value === "new") {
+        editInput.value = "";
+        editInput.placeholder = "new tag text — will become Tag " + (quickTags.length + 1);
+        editInput.focus();
+      } else {
+        const i = parseInt(editSel.value, 10);
+        editInput.value = quickTags[i] || "";
+        editInput.placeholder = "canned open-code text";
+      }
+    });
+  }
+  const saveBtn = document.getElementById("quicktagSaveBtn");
+  if (saveBtn) {
+    saveBtn.addEventListener("click", () => {
+      const newText = editInput.value.trim();
+      if (!newText) {
+        flashSaveStatus("Tag text can't be empty.", true);
+        return;
+      }
+      if (editSel.value === "new") {
+        if (quickTags.length >= MAX_QUICKTAGS) {
+          flashSaveStatus(`Maximum ${MAX_QUICKTAGS} tags (one per digit key).`, true);
+          return;
+        }
+        quickTags.push(newText);
+        saveQuickTags();
+        render();
+        flashSaveStatus(`Added Tag ${quickTags.length}: "${newText.length > 40 ? newText.slice(0, 40) + '…' : newText}"`);
+      } else {
+        const i = parseInt(editSel.value, 10);
+        quickTags[i] = newText;
+        saveQuickTags();
+        render();
+        flashSaveStatus(`Saved Tag ${i + 1}.`);
+      }
+    });
+  }
+  const deleteBtn = document.getElementById("quicktagDeleteBtn");
+  if (deleteBtn) {
+    deleteBtn.addEventListener("click", () => {
+      if (editSel.value === "new") {
+        flashSaveStatus("Nothing to delete — pick an existing tag first.", true);
+        return;
+      }
+      if (quickTags.length <= 1) {
+        flashSaveStatus("Can't delete the last tag.", true);
+        return;
+      }
+      const i = parseInt(editSel.value, 10);
+      const removed = quickTags[i];
+      if (!confirm(`Delete Tag ${i + 1}: "${removed.length > 60 ? removed.slice(0, 60) + '…' : removed}"?`)) return;
+      quickTags.splice(i, 1);
+      saveQuickTags();
+      render();
+      flashSaveStatus(`Deleted Tag ${i + 1}. Remaining tags renumbered.`);
+    });
+  }
+  const resetBtn = document.getElementById("quicktagResetBtn");
+  if (resetBtn) {
+    resetBtn.addEventListener("click", () => {
+      if (!confirm("Reset to the 6 default tags? Any custom tags you added will be removed.")) return;
+      quickTags = DEFAULT_QUICKTAGS.slice();
+      saveQuickTags();
+      render();
+      flashSaveStatus("Quick-tags reset to defaults.");
+    });
+  }
+  const cancelBtn = document.getElementById("quicktagCancelBtn");
+  if (cancelBtn) {
+    cancelBtn.addEventListener("click", () => {
+      editRow.style.display = "none";
+    });
+  }
+  // Filter dropdown.
+  const filterSel = document.getElementById("inboxDecisionFilter");
+  if (filterSel) {
+    filterSel.addEventListener("change", () => {
+      inboxDecisionFilter = filterSel.value;
+      currentIdx = 0;
+      applyFilter();
+      render();
+    });
+  }
+  // Apply-to-all button.
+  const applyAll = document.getElementById("applyAllBtn");
+  if (applyAll) {
+    applyAll.addEventListener("click", applyCurrentNoteToFilter);
+  }
+}
+
+function wireNotesArea(storageKey) {
+  // Shared between persona and inbox: existing textarea+save-status pair,
+  // both keyed by whatever id the calling surface provides.
+  const notesArea = $("notesArea");
+  const saveStatus = $("saveStatus");
+  const existing = localStorage.getItem(storageKey);
+  if (existing) {
+    notesArea.value = existing;
+    saveStatus.textContent = "saved";
+    saveStatus.classList.add("saved");
+  } else {
+    saveStatus.textContent = "unsaved";
+    saveStatus.classList.remove("saved");
+  }
+  notesArea.addEventListener("input", () => {
+    saveStatus.textContent = "editing...";
+    saveStatus.classList.remove("saved");
+  });
+  notesArea.addEventListener("blur", () => {
+    const val = notesArea.value.trim();
+    if (val) {
+      localStorage.setItem(storageKey, val);
+      saveStatus.textContent = "saved " + new Date().toLocaleTimeString();
+      saveStatus.classList.add("saved");
+    } else {
+      localStorage.removeItem(storageKey);
+      saveStatus.textContent = "unsaved";
+      saveStatus.classList.remove("saved");
+    }
+  });
+}
+
+function render() {
+  if (surface === "inbox") {
+    if (allInboxRows.length === 0) {
+      $("main").innerHTML = `<div class="empty-state"><h2>Load a week JSONL to begin</h2></div>`;
+      $("navInfo").textContent = "no rows loaded";
+      $("prevBtn").disabled = true;
+      $("nextBtn").disabled = true;
+      $("exportBtn").disabled = true;
+      $("backupNotesBtn").disabled = true;
+      return;
+    }
+    if (visibleInboxRows.length === 0) {
+      // Filter shows nothing — still show the bar so Megha can change filter.
+      $("main").innerHTML = renderQuickTagBar() +
+        `<div class="empty-state"><h2>No inbox rows match the current filter</h2>
+         <p>Total loaded: ${allInboxRows.length}. Change filter above to see them.</p></div>`;
+      $("navInfo").textContent = `0 / ${allInboxRows.length} visible`;
+      $("prevBtn").disabled = true;
+      $("nextBtn").disabled = true;
+      $("exportBtn").disabled = false;
+      $("backupNotesBtn").disabled = false;
+      wireQuickTagBar();
+      return;
+    }
+    const row = visibleInboxRows[currentIdx];
+    $("main").innerHTML = renderQuickTagBar() + renderInboxRow(row);
+    const filtLabel = inboxDecisionFilter === "all" ? "" : ` (${inboxDecisionFilter})`;
+    $("navInfo").textContent = `Decision ${currentIdx + 1} / ${visibleInboxRows.length}${filtLabel}`;
+    $("prevBtn").disabled = currentIdx === 0;
+    $("nextBtn").disabled = currentIdx >= visibleInboxRows.length - 1;
+    $("exportBtn").disabled = false;
+    $("backupNotesBtn").disabled = false;
+    wireNotesArea(INBOX_STORAGE_PREFIX + row.row_id);
+    wireQuickTagBar();
+    history.replaceState(null, "", `#${currentIdx + 1}`);
+    window.scrollTo({ top: 0, behavior: "smooth" });
+    return;
+  }
+
+  // Persona path (unchanged behavior).
+  if (visibleSessions.length === 0) {
+    $("main").innerHTML = `<div class="empty-state">
+      <h2>${allSessions.length === 0 ? "Load a backfill JSONL to begin" : "No sessions match the current filter"}</h2>
+      ${allSessions.length > 0 ? `<p>Total loaded: ${allSessions.length}. Toggle the filter to see all.</p>` : ""}
+    </div>`;
+    $("navInfo").textContent = allSessions.length === 0 ? "no sessions loaded" : "0 visible";
+    $("prevBtn").disabled = true;
+    $("nextBtn").disabled = true;
+    $("exportBtn").disabled = allSessions.length === 0;
+    $("backupNotesBtn").disabled = allSessions.length === 0;
+    return;
+  }
+  const session = visibleSessions[currentIdx];
+  $("main").innerHTML = renderSession(session);
+  $("navInfo").textContent = `Session ${currentIdx + 1} / ${visibleSessions.length} · ${session.session_size} msg${session.session_size === 1 ? "" : "s"}`;
+  $("prevBtn").disabled = currentIdx === 0;
+  $("nextBtn").disabled = currentIdx >= visibleSessions.length - 1;
+  $("exportBtn").disabled = false;
+  $("backupNotesBtn").disabled = false;
+  wireNotesArea(STORAGE_PREFIX + session.session_id);
+
+  history.replaceState(null, "", `#${currentIdx + 1}`);
+  window.scrollTo({ top: 0, behavior: "smooth" });
+}
+
+function detectSurface(rows) {
+  // Inspect the first non-null row. Persona rows always carry a `session_id`
+  // and a `messages` array; inbox rows always carry an `email_id`. If we see
+  // neither, fall back to persona (existing default) and let the empty-state
+  // path catch the problem.
+  const first = rows.find(r => r != null);
+  if (!first) return "persona";
+  if (first.email_id) return "inbox";
+  if (first.session_id) return "persona";
+  return "persona";
+}
+
+function loadFile(file) {
+  const reader = new FileReader();
+  reader.onload = (e) => {
+    const text = e.target.result;
+    const parsed = text.split("\n")
+      .filter(l => l.trim())
+      .map(l => { try { return JSON.parse(l); } catch { return null; } })
+      .filter(x => x != null);
+    surface = detectSurface(parsed);
+    localStorage.setItem(SOURCE_FILE_KEY, file.name);
+    currentIdx = 0;
+
+    if (surface === "inbox") {
+      loadQuickTags();
+      // Skip webhook re-fire suppression rows — they're metadata about
+      // Microsoft's webhook firing twice, not user-relevant decisions.
+      // The original decision (from the first webhook fire) is the row
+      // Megha labels. Suppression rows still exist in the eval feed for
+      // auditing but should not appear as labelable cards.
+      const allInboxRaw = parsed.filter(r =>
+        r.email_id && r.decision !== "webhook_redup_hit" && r.suppressed !== true,
+      );
+      // Dedup by email_id, keeping the latest decision per email. The
+      // runtime's webhook dedup only records on task-create, so skipped
+      // emails get processed multiple times per webhook re-fire and the
+      // raw JSONL carries 1.5x-2x the unique-email count. Collapsing here
+      // lets Megha label each email once; the runtime fix is queued
+      // separately. Within a dupe group we keep the latest ts (most
+      // recent decision wins). Decisions are consistent across re-fires
+      // today, so "latest" and "any" produce the same labeling outcome.
+      const groupsByEmail = new Map();
+      for (const r of allInboxRaw) {
+        const eid = r.email_id;
+        if (!groupsByEmail.has(eid)) groupsByEmail.set(eid, []);
+        groupsByEmail.get(eid).push(r);
+      }
+      allInboxRows = [];
+      for (const [eid, group] of groupsByEmail.entries()) {
+        group.sort((a, b) => (a.ts || "").localeCompare(b.ts || ""));
+        const kept = group[group.length - 1];
+        // Migrate any existing label from the dropped row_ids to the kept
+        // one, so Megha's prior labeling work isn't orphaned by dedup.
+        // If multiple sibling rows have notes (rare), keep the longest.
+        const keptKey = INBOX_STORAGE_PREFIX + kept.row_id;
+        if (!localStorage.getItem(keptKey)) {
+          let best = "";
+          for (const sib of group) {
+            if (sib.row_id === kept.row_id) continue;
+            const note = localStorage.getItem(INBOX_STORAGE_PREFIX + sib.row_id) || "";
+            if (note.length > best.length) best = note;
+          }
+          if (best) localStorage.setItem(keptKey, best);
+        }
+        allInboxRows.push(kept);
+      }
+      const collapsedCount = allInboxRaw.length - allInboxRows.length;
+      // Sort chronologically so labeling reads in time order. ts is UTC ISO,
+      // string-compares correctly.
+      allInboxRows.sort((a, b) => (a.ts || "").localeCompare(b.ts || ""));
+      allSessions = [];
+      visibleSessions = [];
+      inboxDecisionFilter = "all";
+      applyFilter();
+      $("viewerTitle").textContent = "Kavi trace viewer — inbox decisions";
+      // The multi-msg filter is persona-only; hide it on inbox.
+      $("filterBar").style.display = "none";
+      if (collapsedCount > 0) {
+        setTimeout(() => flashSaveStatus(
+          `Loaded ${allInboxRows.length} unique emails. Collapsed ${collapsedCount} duplicate decisions (runtime webhook re-fires; fix queued).`
+        ), 100);
+      }
+    } else {
+      allSessions = parsed.filter(r => Array.isArray(r.messages));
+      allSessions.sort((a, b) => (a.first_ts || "").localeCompare(b.first_ts || ""));
+      allInboxRows = [];
+      visibleInboxRows = [];
+      $("viewerTitle").textContent = "Kavi trace viewer — persona sessions";
+      $("filterBar").style.display = "";
+      applyFilter();
+    }
+    const total = surface === "inbox" ? visibleInboxRows.length : visibleSessions.length;
+    const hashIdx = parseInt(location.hash.slice(1), 10);
+    if (!isNaN(hashIdx) && hashIdx >= 1 && hashIdx <= total) {
+      currentIdx = hashIdx - 1;
+    }
+    render();
+  };
+  reader.readAsText(file);
+}
+
+function truncate(s, max = 30000) {
+  if (s == null) return "";
+  const str = String(s);
+  if (str.length <= max) return str;
+  return str.slice(0, max) + "...[truncated]";
+}
+
+function csvEscape(value) {
+  if (value == null) return "";
+  const s = String(value);
+  if (s.includes('"') || s.includes(",") || s.includes("\n") || s.includes("\r")) {
+    return '"' + s.replace(/"/g, '""') + '"';
+  }
+  return s;
+}
+
+function buildSessionTextFull(session) {
+  const parts = [];
+  (session.messages || []).forEach((m, i) => {
+    const time = formatPTTime(m.ts);
+    if (m.kind === "inbound") {
+      parts.push(`--- #${i + 1} MEGHA @ ${time} ---`);
+      parts.push(m.text || "(empty)");
+    } else {
+      const initLabel = !m.triggered_by ? " [Kavi-initiated]" : "";
+      const fallbackLabel = m.fallback_used ? " [FALLBACK]" : "";
+      const structFailLabel = m.structural_pass === false ? " [STRUCTURAL FAIL]" : "";
+      parts.push(`--- #${i + 1} KAVI [${m.outbound_kind}]${initLabel}${fallbackLabel}${structFailLabel} @ ${time} ---`);
+      parts.push(m.text || "(empty)");
+    }
+  });
+  return parts.join("\n");
+}
+
+function buildLLMSummary(session) {
+  const lines = [];
+  (session.messages || []).forEach((m, i) => {
+    if (m.kind !== "outbound") return;
+    (m.llm_calls || []).forEach(c => {
+      const tok = c.input_tokens != null ? `${c.input_tokens}→${c.output_tokens}tok` : "?tok";
+      lines.push(`#${i + 1} ${c.call_type || "?"}: ${tok}`);
+    });
+  });
+  return lines.join(" | ");
+}
+
+function buildToolSummary(session) {
+  const lines = [];
+  (session.messages || []).forEach((m, i) => {
+    if (m.kind !== "outbound") return;
+    (m.tool_calls || []).forEach(c => {
+      const ok = c.result?.ok ? "ok" : c.result?.ok === false ? "FAIL" : "?";
+      lines.push(`#${i + 1} ${c.tool || "?"}=${ok}`);
+    });
+  });
+  return lines.join(" | ");
+}
+
+function buildStructuralSummary(session) {
+  let pass = 0, fail = 0, total = 0;
+  (session.messages || []).forEach(m => {
+    if (m.kind !== "outbound") return;
+    total++;
+    if (m.structural_pass === true) pass++;
+    else if (m.structural_pass === false) fail++;
+  });
+  return total > 0 ? `${pass}/${total} pass${fail > 0 ? `, ${fail} FAIL` : ""}` : "(no outbound)";
+}
+
+async function saveBlobToFile(blob, suggestedName, mimeType, acceptExt) {
+  // Prefer the File System Access API (Chrome / Edge on Mac). The picker lets
+  // Megha navigate to ~/Documents/HomeOS/evals/traces/ once; Chrome remembers
+  // the location across sessions for subsequent saves. Falls back to the
+  // standard download-to-Downloads path on browsers that don't support it.
+  if (window.showSaveFilePicker) {
+    try {
+      const handle = await window.showSaveFilePicker({
+        suggestedName,
+        startIn: "documents",  // ~/Documents/ — closest browser-permitted root
+        types: [{
+          description: mimeType,
+          accept: { [mimeType]: [acceptExt] },
+        }],
+      });
+      const writable = await handle.createWritable();
+      await writable.write(blob);
+      await writable.close();
+      return { saved: true, method: "file_system_access", name: handle.name };
+    } catch (err) {
+      if (err.name === "AbortError") {
+        return { saved: false, method: "cancelled" };
+      }
+      console.warn("showSaveFilePicker failed, falling back to download:", err);
+    }
+  }
+  // Fallback: download to the browser's Downloads folder. Megha will need to
+  // move the file into ~/Documents/HomeOS/evals/traces/ manually.
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement("a");
+  a.href = url;
+  a.download = suggestedName;
+  document.body.appendChild(a);
+  a.click();
+  document.body.removeChild(a);
+  URL.revokeObjectURL(url);
+  return { saved: true, method: "download_fallback", name: suggestedName };
+}
+
+function flashSaveStatus(message, isError = false) {
+  // Quick toast at the bottom-right so Megha sees the save outcome without a
+  // disruptive modal. Drops away after 4 sec.
+  const existing = document.getElementById("save-toast");
+  if (existing) existing.remove();
+  const toast = document.createElement("div");
+  toast.id = "save-toast";
+  toast.style.cssText = `
+    position: fixed; bottom: 24px; right: 24px; z-index: 100;
+    background: ${isError ? "#dc2626" : "#16a34a"}; color: #fff;
+    padding: 12px 18px; border-radius: 8px; font-size: 13px;
+    box-shadow: 0 4px 16px rgba(0,0,0,0.15); max-width: 360px;
+  `;
+  toast.textContent = message;
+  document.body.appendChild(toast);
+  setTimeout(() => toast.remove(), 4000);
+}
+
+function weekFromSourceFile() {
+  // Sniff the loaded filename for "week<N>" so the export filename matches
+  // the input. Falls back to "week1" if no number is found.
+  const src = localStorage.getItem(SOURCE_FILE_KEY) || "";
+  const m = src.match(/week(\d+)/i);
+  return m ? `week${m[1]}` : "week1";
+}
+
+async function exportPersonaCSV() {
+  const headers = [
+    "session_id", "first_timestamp_pt", "last_timestamp_pt",
+    "initiator", "session_size", "channel", "capability", "participants",
+    "session_text_full", "decision_summary",
+    "structural_pass_summary", "llm_calls_summary", "tool_calls_summary",
+    "open_code", "axial_code",
+  ];
+  const rows = [headers.join(",")];
+  for (const s of allSessions) {
+    const key = STORAGE_PREFIX + s.session_id;
+    const note = localStorage.getItem(key) || "";
+    const row = [
+      s.session_id,
+      formatPT(s.first_ts),
+      formatPT(s.last_ts),
+      s.initiator || "",
+      s.session_size || (s.messages || []).length,
+      s.channel || "",
+      s.capability || "",
+      (s.participants || []).join(";"),
+      truncate(buildSessionTextFull(s)),
+      truncate(s.decision_summary || "", 5000),
+      truncate(buildStructuralSummary(s), 1000),
+      truncate(buildLLMSummary(s), 5000),
+      truncate(buildToolSummary(s), 5000),
+      truncate(note, 10000),
+      "",
+    ].map(csvEscape);
+    rows.push(row.join(","));
+  }
+  const csv = rows.join("\n");
+  const blob = new Blob([csv], { type: "text/csv;charset=utf-8" });
+  const dateStr = new Date().toISOString().slice(0, 10);
+  const suggestedName = `eval-persona-labeled-${weekFromSourceFile()}-${dateStr}.csv`;
+  return saveBlobToFile(blob, suggestedName, "text/csv", ".csv");
+}
+
+async function exportInboxCSV() {
+  // Columns: email_id, ts_pt, source_account, sender, subject, decision,
+  // reason, owner, confidence, task_title, open_code, axial_code. The
+  // axial_code column is intentionally empty — Megha fills it post-hoc in
+  // Sheets after clustering open codes.
+  const headers = [
+    "email_id", "ts_pt", "source_account", "sender", "subject",
+    "decision", "reason", "owner", "confidence", "task_title",
+    "open_code", "axial_code",
+  ];
+  const rows = [headers.join(",")];
+  for (const r of allInboxRows) {
+    const note = localStorage.getItem(INBOX_STORAGE_PREFIX + r.row_id) || "";
+    const row = [
+      r.email_id || "",
+      r.ts_pt || "",
+      r.source_account || "",
+      r.sender || "",
+      truncate(r.subject || "", 1000),
+      r.decision || "",
+      truncate(r.reason || "", 5000),
+      r.owner || "",
+      r.confidence || "",
+      truncate(r.task_title || "", 1000),
+      truncate(note, 10000),
+      "",
+    ].map(csvEscape);
+    rows.push(row.join(","));
+  }
+  const csv = rows.join("\n");
+  const blob = new Blob([csv], { type: "text/csv;charset=utf-8" });
+  const dateStr = new Date().toISOString().slice(0, 10);
+  const suggestedName = `eval-inbox-labeled-${weekFromSourceFile()}-${dateStr}.csv`;
+  return saveBlobToFile(blob, suggestedName, "text/csv", ".csv");
+}
+
+async function exportCSV() {
+  if (surface === "inbox") {
+    if (allInboxRows.length === 0) return;
+    const result = await exportInboxCSV();
+    if (result.method === "file_system_access") {
+      flashSaveStatus(`Saved ${result.name} to chosen location.`);
+    } else if (result.method === "download_fallback") {
+      flashSaveStatus(`Downloaded ${result.name} (browser doesn't support direct save). Move it to evals/inbox-to-task/traces/ manually.`, true);
+    }
+    return;
+  }
+  if (allSessions.length === 0) return;
+  const result = await exportPersonaCSV();
+  if (result.method === "file_system_access") {
+    flashSaveStatus(`Saved ${result.name} to chosen location.`);
+  } else if (result.method === "download_fallback") {
+    flashSaveStatus(`Downloaded ${result.name} (browser doesn't support direct save). Move it to evals/kavi-persona/traces/ manually.`, true);
+  }
+}
+
+function visibleCount() {
+  return surface === "inbox" ? visibleInboxRows.length : visibleSessions.length;
+}
+
+$("filePicker").addEventListener("change", (e) => {
+  if (e.target.files[0]) loadFile(e.target.files[0]);
+});
+$("prevBtn").addEventListener("click", () => {
+  if (currentIdx > 0) { currentIdx--; render(); }
+});
+$("nextBtn").addEventListener("click", () => {
+  if (currentIdx < visibleCount() - 1) { currentIdx++; render(); }
+});
+$("jumpInput").addEventListener("change", (e) => {
+  const n = parseInt(e.target.value, 10);
+  if (!isNaN(n) && n >= 1 && n <= visibleCount()) {
+    currentIdx = n - 1;
+    render();
+  }
+});
+$("exportBtn").addEventListener("click", exportCSV);
+$("backupNotesBtn").addEventListener("click", async () => {
+  // Notes backup writes whatever's loaded — persona session notes or inbox
+  // decision notes — into one JSON file keyed by the right id type.
+  const isInbox = surface === "inbox";
+  const items = isInbox ? allInboxRows : allSessions;
+  if (items.length === 0) return;
+  const dump = {
+    schema: isInbox ? "kavi_inbox_notes_backup_v1" : "kavi_notes_backup_v1",
+    surface: surface,
+    exported_at: new Date().toISOString(),
+    source_file: localStorage.getItem(SOURCE_FILE_KEY) || null,
+    row_count: items.length,
+    notes: {},
+  };
+  for (const item of items) {
+    const id = isInbox ? item.row_id : item.session_id;
+    const key = (isInbox ? INBOX_STORAGE_PREFIX : STORAGE_PREFIX) + id;
+    const note = localStorage.getItem(key) || "";
+    if (note) dump.notes[id] = note;
+  }
+  const blob = new Blob([JSON.stringify(dump, null, 2)], { type: "application/json" });
+  const dateStr = new Date().toISOString().replace(/[:.]/g, "-").slice(0, 19);
+  const prefix = isInbox ? "kavi-inbox-notes-backup" : "kavi-notes-backup";
+  const suggestedName = `${prefix}-${dateStr}.json`;
+  const result = await saveBlobToFile(blob, suggestedName, "application/json", ".json");
+  if (result.method === "file_system_access") {
+    flashSaveStatus(`Backed up ${Object.keys(dump.notes).length} notes to chosen location.`);
+  } else if (result.method === "download_fallback") {
+    flashSaveStatus(`Downloaded backup (browser doesn't support direct save).`, true);
+  }
+});
+$("filterMulti").addEventListener("change", (e) => {
+  filterMultiOnly = e.target.checked;
+  currentIdx = 0;
+  applyFilter();
+  render();
+});
+
+document.addEventListener("keydown", (e) => {
+  if (e.target.tagName === "TEXTAREA" || e.target.tagName === "INPUT") return;
+  if (surface === "inbox" && e.key >= "1" && e.key <= "9" && !e.metaKey && !e.ctrlKey && !e.altKey) {
+    const idx = parseInt(e.key, 10) - 1;
+    if (idx < quickTags.length) {
+      e.preventDefault();
+      applyTagToCurrentCard(idx);
+    }
+    return;
+  }
+  if (e.key === "ArrowLeft" && currentIdx > 0) { currentIdx--; render(); }
+  if (e.key === "ArrowRight" && currentIdx < visibleCount() - 1) { currentIdx++; render(); }
+});
+</script>
+</body>
+</html>

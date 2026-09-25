@@ -1,0 +1,67 @@
+{
+  "id": "2026-05-08_apostrophe_tokenizer_zero_matches",
+  "description": "Pre-filter tokenizer's 4-char rule + apostrophe handling caused 'oak circle tea' to not match 'Oak Circle' (with apostrophe) in task titles, returning 0 candidates from a slate of 4 real matches. Reverted in 53e1dc7 (deterministic-narrowing-before-LLM-judgment principle).",
+  "inbound": {
+    "text": "Mark all oak circle tea items done",
+    "sender": "+15555550101",
+    "ts": "2026-05-08T17:39:22Z"
+  },
+  "graph_state": {
+    "open_tasks": [
+      {"id": "et_zoom",   "title": "MJ Forward Oak Circle Tea Zoom link to your guest",       "status": "notStarted"},
+      {"id": "et_cater",  "title": "MJ Confirm Oak Circle Tea catering count by Friday",       "status": "notStarted"},
+      {"id": "et_print",  "title": "MJ Print Oak Circle Tea name tags",                        "status": "notStarted"},
+      {"id": "et_maple", "title": "MJ Oak Circle Tea at Maple Street tomorrow 4pm RSVP",     "status": "notStarted"},
+      {"id": "t_other_00", "title": "MJ Pay Northgate Medical overdue balance ($630.00)",         "status": "notStarted"},
+      {"id": "t_other_01", "title": "MJ Schedule Max swim lesson",                          "status": "notStarted"},
+      {"id": "t_other_02", "title": "MJ Renew car registration",                            "status": "notStarted"},
+      {"id": "t_other_03", "title": "MJ Call electrician about kitchen outlet",             "status": "notStarted"},
+      {"id": "t_other_04", "title": "MJ Order new toddler shoes",                           "status": "notStarted"},
+      {"id": "t_other_05", "title": "MJ Schedule pediatrician 2yr checkup",                 "status": "notStarted"},
+      {"id": "t_other_06", "title": "MJ Pick up dry cleaning",                              "status": "notStarted"},
+      {"id": "t_other_07", "title": "MJ Update Costco membership",                          "status": "notStarted"},
+      {"id": "t_other_08", "title": "MJ Mail birthday card to Nani",                        "status": "notStarted"},
+      {"id": "t_other_09", "title": "MJ Replace water filter",                              "status": "notStarted"},
+      {"id": "t_other_10", "title": "MJ Submit Anthropic interview prep notes",             "status": "notStarted"},
+      {"id": "t_other_11", "title": "MJ Schedule house cleaning for Saturday",              "status": "notStarted"},
+      {"id": "t_other_12", "title": "MJ Confirm summer camp deposit",                       "status": "notStarted"},
+      {"id": "t_other_13", "title": "MJ Resolve UW $630 medical bill",                      "status": "notStarted"},
+      {"id": "t_other_14", "title": "MJ Pick up groceries Trader Joes",                     "status": "notStarted"},
+      {"id": "t_other_15", "title": "MJ Schedule dentist for Max",                          "status": "notStarted"},
+      {"id": "t_other_16", "title": "MJ Update household roster on iCloud",                 "status": "notStarted"},
+      {"id": "t_other_17", "title": "MJ Buy birthday gift for Kelly",                       "status": "notStarted"},
+      {"id": "t_other_18", "title": "MJ Reply to Notion recruiter",                         "status": "notStarted"},
+      {"id": "t_other_19", "title": "MJ Cancel old Hulu subscription",                      "status": "notStarted"},
+      {"id": "t_other_20", "title": "MJ Order kid Tylenol from Amazon",                     "status": "notStarted"},
+      {"id": "t_other_21", "title": "MJ Schedule HVAC tune-up",                             "status": "notStarted"},
+      {"id": "t_other_22", "title": "MJ Reply to Jill email about preschool",              "status": "notStarted"},
+      {"id": "t_other_23", "title": "MJ Pay monthly Tailscale invoice",                     "status": "notStarted"},
+      {"id": "t_other_24", "title": "MJ Confirm OpenAI recruiter call Thursday",            "status": "notStarted"},
+      {"id": "t_other_25", "title": "MJ Order pet food refill",                             "status": "notStarted"}
+    ]
+  },
+  "mock_llm_responses": {
+    "classify_action_intent": {
+      "has_action": true,
+      "action_type": "mark_done",
+      "target_text": "oak circle tea items",
+      "confidence": "low"
+    },
+    "match_target_to_open_task": {
+      "match_id": null,
+      "candidate_task_ids": ["et_zoom", "et_cater", "et_print", "et_maple"],
+      "confidence": "medium",
+      "reasoning": "Four open Oak Circle Tea tasks; 'all' is a batch reference."
+    },
+    "compose_action_clarifying_reply": "Found 4 Oak Circle Tea tasks: Zoom link, catering count, name tags, Maple Street RSVP. Mark all four?"
+  },
+  "expected_outcome": {
+    "matcher_received_full_slate": true,
+    "matcher_candidate_count": 4,
+    "pending_clarification_holds_only_matcher_subset": true,
+    "no_state_claim_hallucination": true,
+    "user_visible_reply_must_name_tasks": true,
+    "result_status": "action_clarifying"
+  },
+  "regression_for_commit": "53e1dc7"
+}

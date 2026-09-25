@@ -1,0 +1,26 @@
+{
+  "id": "2026-05-08_max_tokens_400_clips_matcher_json",
+  "description": "Even with 100-task input cap and lenient parser, the matcher kept hitting output_tokens=400 (max_tokens cap) and clipping the response mid-JSON when listing 4+ long MS To Do task IDs. Clipped JSON has no closing brace; first-{/last-} fallback returns None. Fixed in 6015776 (max_tokens 400 -> 1500 + ask for raw JSON, no fences). Reproduces 2026-05-08T18:54Z and 19:00Z traces.",
+  "inbound": {
+    "text": "Mark all oak circle tea items done",
+    "sender": "+15555550101",
+    "ts": "2026-05-08T18:54:19Z"
+  },
+  "graph_state": {
+    "open_tasks": [
+      {"id": "AAMkAGI2NjQ3ZTM0LWVjMjYtNGY1Yy1hMzExLWE2OTU2YmYwZGI3MgBGAAAAAACzL_REGRESSION_zoom",   "title": "MJ Forward Oak Circle Tea Zoom link to your guest",       "status": "notStarted"},
+      {"id": "AAMkAGI2NjQ3ZTM0LWVjMjYtNGY1Yy1hMzExLWE2OTU2YmYwZGI3MgBGAAAAAACzL_REGRESSION_cater",  "title": "MJ Confirm Oak Circle Tea catering count by Friday",     "status": "notStarted"},
+      {"id": "AAMkAGI2NjQ3ZTM0LWVjMjYtNGY1Yy1hMzExLWE2OTU2YmYwZGI3MgBGAAAAAACzL_REGRESSION_print",  "title": "MJ Print Oak Circle Tea name tags",                      "status": "notStarted"},
+      {"id": "AAMkAGI2NjQ3ZTM0LWVjMjYtNGY1Yy1hMzExLWE2OTU2YmYwZGI3MgBGAAAAAACzL_REGRESSION_maple", "title": "MJ Oak Circle Tea at Maple Street tomorrow 4pm RSVP",   "status": "notStarted"}
+    ]
+  },
+  "raw_llm_output_pre_fix_clipped_400_tokens": "```json\n{\n  \"match_id\": null,\n  \"candidate_task_ids\": [\n    \"AAMkAGI2NjQ3ZTM0LWVjMjYtNGY1Yy1hMzExLWE2OTU2YmYwZGI3MgBGAAAAAACzL_REGRESSION_zoom\",\n    \"AAMkAGI2NjQ3ZTM0LWVjMjYtNGY1Yy1hMzExLWE2OTU2YmYwZGI3MgBGAAAAAACzL_REGRESSION_cater\",\n    \"AAMkAGI2NjQ3ZTM0LWVjMjYtNGY1Yy1hMzExLWE2OTU2YmYwZGI3MgBGAAAAAACzL_REGRESSION_print\",\n    \"AAMkAGI2NjQ3ZTM0LWVjMjYtNGY1Yy1hMzExLWE2OTU2YmYwZGI3MgBGAAAAAACzL_REGRESSION_maple\"\n  ],\n  \"confidence\": \"medium\",\n  \"reasoning\": \"All four candidate IDs match the 'Oak Circle Tea' batch reference; 'all' indicates the user wants every match",
+  "raw_llm_output_post_fix_full_response": "{\"match_id\": null, \"candidate_task_ids\": [\"AAMkAGI2NjQ3ZTM0LWVjMjYtNGY1Yy1hMzExLWE2OTU2YmYwZGI3MgBGAAAAAACzL_REGRESSION_zoom\", \"AAMkAGI2NjQ3ZTM0LWVjMjYtNGY1Yy1hMzExLWE2OTU2YmYwZGI3MgBGAAAAAACzL_REGRESSION_cater\", \"AAMkAGI2NjQ3ZTM0LWVjMjYtNGY1Yy1hMzExLWE2OTU2YmYwZGI3MgBGAAAAAACzL_REGRESSION_print\", \"AAMkAGI2NjQ3ZTM0LWVjMjYtNGY1Yy1hMzExLWE2OTU2YmYwZGI3MgBGAAAAAACzL_REGRESSION_maple\"], \"confidence\": \"medium\", \"reasoning\": \"Four open Oak Circle Tea matches.\"}",
+  "expected_outcome": {
+    "post_fix_response_parses_to_dict": true,
+    "post_fix_match_id_none_candidates_4": true,
+    "pre_fix_clipped_response_returns_none_via_extract_json": true,
+    "max_tokens_for_compose_action_target_match_must_be_at_least_1500": true
+  },
+  "regression_for_commit": "6015776"
+}

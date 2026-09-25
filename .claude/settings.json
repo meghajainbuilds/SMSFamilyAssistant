@@ -1,0 +1,15 @@
+{
+  "mstodo_shared_list_id": "YOUR_MS_TODO_LIST_ID",
+  "permissions": {
+    "allow": [
+      "Bash(.venv/bin/python -m pytest *)",
+      "Bash(python3 *)",
+      "Bash(bash kavi-runtime/scripts/deploy.sh*)",
+      "Bash(kavi-runtime/scripts/deploy.sh*)",
+      "Bash(./scripts/deploy.sh*)",
+      "Bash(bash scripts/deploy.sh*)",
+      "Bash(./scripts/verify_deploy.sh*)",
+      "Bash(bash scripts/verify_deploy.sh*)"
+    ]
+  }
+}

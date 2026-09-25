@@ -1,0 +1,32 @@
+[project]
+name = "kavi-runtime"
+version = "0.2.0"
+description = "Always-on Python service for HomeOS Kavi (Megha's Chief of Staff)"
+requires-python = ">=3.11"
+# Pinned 2026-05-06 evening (B3 of audit follow-up). Versions match what's
+# installed in the production venv at /Users/kavi/kavi-runtime/.venv on
+# Kavi's Mac. msgraph-sdk was dropped — graph_client uses msal directly.
+# Do NOT bump these in this PR; pin first, upgrade in a separate PR with
+# eval validation.
+dependencies = [
+    "anthropic==0.97.0",
+    "msal==1.36.0",
+    "azure-identity==1.25.3",
+    "fastapi==0.136.1",
+    "uvicorn[standard]==0.46.0",
+    "httpx==0.28.1",
+    "apscheduler==3.11.2",
+    "pyyaml==6.0.3",
+    "python-dotenv==1.2.2",
+    "pydantic==2.13.3",
+]
+
+[project.scripts]
+kavi-runtime = "kavi_runtime.main:run"
+
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+[tool.hatch.build.targets.wheel]
+packages = ["kavi_runtime"]

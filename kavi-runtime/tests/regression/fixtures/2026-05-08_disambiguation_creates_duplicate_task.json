@@ -1,0 +1,45 @@
+{
+  "id": "2026-05-08_disambiguation_creates_duplicate_task",
+  "description": "After Kavi asked 'Found 4 Oak Circle Tea — mark all four?', Megha replied 'MJ oak circle tea at maple street tomorrow' to disambiguate. The resolver returned fresh_intent (incorrectly), classify_action_intent then returned create_task, and the runtime created a duplicate 'MJ MJ oak circle tea at maple street tomorrow' task instead of marking the existing et_maple. Fixed in 53e1dc7 (Fix D: post-clarifier create_task guard).",
+  "inbound": {
+    "text": "MJ oak circle tea at maple street tomorrow",
+    "sender": "+15555550101",
+    "ts": "2026-05-08T17:40:49Z"
+  },
+  "pending_clarification_state": {
+    "action_type": "mark_done",
+    "original_inbound": "Mark all oak circle tea items done",
+    "proposed_matches": [
+      {"id": "et_zoom",   "title": "MJ Forward Oak Circle Tea Zoom link to your guest"},
+      {"id": "et_cater",  "title": "MJ Confirm Oak Circle Tea catering count by Friday"},
+      {"id": "et_print",  "title": "MJ Print Oak Circle Tea name tags"},
+      {"id": "et_maple", "title": "MJ Oak Circle Tea at Maple Street tomorrow 4pm RSVP"}
+    ],
+    "reply_sent": "Found 4 Oak Circle Tea tasks: Zoom link, catering count, name tags, Maple Street RSVP. Mark all four?"
+  },
+  "graph_state": {
+    "open_tasks": []
+  },
+  "mock_llm_responses": {
+    "resolve_pending_action_clarification": {
+      "resolution": "fresh_intent",
+      "confirmed_match_ids": [],
+      "reasoning": "looks like a new task with date 'tomorrow'"
+    },
+    "classify_action_intent": {
+      "has_action": true,
+      "action_type": "create",
+      "target_text": "MJ oak circle tea at maple street tomorrow",
+      "confidence": "high"
+    },
+    "compose_action_clarifying_reply": "I caught a description that matches one of the four Oak Circle Tea tasks I asked about — Maple Street tomorrow. Mark that one?"
+  },
+  "expected_outcome": {
+    "no_duplicate_task_created": true,
+    "create_todo_task_must_not_be_called": true,
+    "result_status": "action_clarifying",
+    "result_reason": "post_clarifier_create_guard",
+    "prior_proposal_re_saved": true
+  },
+  "regression_for_commit": "53e1dc7"
+}

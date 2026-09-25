@@ -1,0 +1,66 @@
+# macOS
+.DS_Store
+
+# Python
+__pycache__/
+*.pyc
+*.pyo
+.venv/
+.pytest_cache/
+.ruff_cache/
+
+# Logs
+*.log
+
+# Node
+node_modules/
+
+# Obsidian per-user state (config kept; per-window state is noise)
+.obsidian/workspace.json
+.obsidian/workspace-mobile.json
+.obsidian/cache
+
+# Local secrets — never commit
+.env
+.env.local
+*_token*.json
+graph_token_cache.json
+graph_subscription.json
+
+# But: regression library fixtures are not secrets even when their
+# filenames happen to contain "token" (e.g. "max_tokens_400_clips" /
+# "apostrophe_tokenizer_zero_matches"). Re-include explicitly so the
+# permanence guarantee on production-trace fixtures holds.
+!kavi-runtime/tests/regression/fixtures/*.json
+
+# Local-only (2026-09-23 public-repo prep)
+article-assets/
+.claude/bluebubbles.local.json
+
+# Private household data (2026-09-24 public-repo prep). These stay on disk
+# in ~/Documents/HomeOS (iCloud-synced) but are never committed.
+# Public examples live alongside: config*.example.yaml.
+household.md
+ScratchPad.md
+handoffs/
+archive/
+investigations/
+.claude/settings.local.json
+kavi-runtime/config.yaml
+kavi-runtime/config-staging.yaml
+kavi-runtime/.deploy.env
+# Eval data: real emails, messages, labels and run logs.
+evals/**/*.jsonl
+evals/**/*.csv
+evals/**/traces/
+evals/**/haiku-replay/
+evals/**/*summary*.md
+evals/**/iteration_count.json
+.claude/imessage-state.json
+
+# Private overlay: real family text for the public specs and skills
+# (public-repo step 2). See kavi-runtime/kavi_runtime/private_overlay.py.
+private/
+
+# Personal, machine-local Claude Code notes (public-repo prep 2026-09-25)
+CLAUDE.local.md

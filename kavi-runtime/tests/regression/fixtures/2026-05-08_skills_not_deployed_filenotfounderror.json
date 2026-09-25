@@ -1,0 +1,39 @@
+{
+  "id": "2026-05-08_skills_not_deployed_filenotfounderror",
+  "description": "11:49 AM PT 2026-05-08: runtime restart after cef1817 hit FileNotFoundError because every fix-bundle agent rsync'd kavi_runtime/ and tests/ but skipped skills/. ClaudeClient._skill() reads skills/<name>.md on every call; missing files raised FileNotFoundError mid-classify. Contract said 'rsync runtime + tests + skills' \u2014 agents did not follow the contract; nothing checked. Surfaced via miss #4 in the post-mortem; fix is the deploy verification harness in Investment 2.",
+  "deploy_contract": {
+    "must_rsync_dirs": [
+      "kavi_runtime/",
+      "tests/",
+      "skills/"
+    ],
+    "post_deploy_assertion": "every skill file present in source must hash-match on Kavi"
+  },
+  "skills_required_at_runtime": [
+    "action_clarifying_reply_composer.md",
+    "action_intent_classifier.md",
+    "action_target_matcher.md",
+    "coordination_addressee_message_composer.md",
+    "coordination_intent_classifier.md",
+    "coordination_outcome_composer.md",
+    "coordination_reply_parser.md",
+    "correction_classifier.md",
+    "email_to_tasks.md",
+    "kavi_conversation.md",
+    "kavi_reply_composer.md",
+    "pause_intent_classifier.md",
+    "pending_clarification_resolver.md",
+    "periodic_summary_composer.md",
+    "post_action_reply_composer.md",
+    "qa_question_composer.md",
+    "reply_intent_parser.md",
+    "task_writer_mstodo.md",
+    "weekly_self_check_classifier.md",
+    "weekly_self_check_composer.md"
+  ],
+  "expected_outcome": {
+    "claude_client_skill_loader_must_raise_filenotfounderror_when_skill_missing": true,
+    "deploy_verify_must_assert_every_skill_file_hash_matches_local_to_kavi": true
+  },
+  "regression_for_commit": "cef1817"
+}

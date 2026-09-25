@@ -1,0 +1,71 @@
+{
+  "id": "2026-05-08_30_task_cap_misses_open_tasks",
+  "description": "The action-layer matcher fetched the 30 most-recently-modified tasks regardless of status. On busy days, mass-completions pushed older notStarted tasks off the slate, so the matcher honestly reported 'no candidates' against an incomplete slate. 11:38 AM PT trace: 'Mark all oak circle tea pending tasks done' missed all 4 open Oak Circle Tea tasks because they sat at recency positions >30. Fixed in cef1817 (server-side $filter on status, $top=100).",
+  "inbound": {
+    "text": "Mark all oak circle tea pending tasks done",
+    "sender": "+15555550101",
+    "ts": "2026-05-08T18:38:09Z"
+  },
+  "graph_state": {
+    "comment": "After a busy mass-completion: 30 just-completed tasks sit at the top of recency. The 4 open Oak Circle Tea tasks are at positions 31-34 by lastModifiedDateTime desc. The list_open_todo_tasks $filter call returns ONLY the 4 open tasks; the legacy list_recent_todo_tasks(top=30) call would return the 30 completed ones and miss every Oak Circle Tea row.",
+    "open_tasks_via_filter": [
+      {"id": "et_zoom",   "title": "MJ Forward Oak Circle Tea Zoom link to your guest",   "status": "notStarted"},
+      {"id": "et_cater",  "title": "MJ Confirm Oak Circle Tea catering count by Friday",   "status": "notStarted"},
+      {"id": "et_print",  "title": "MJ Print Oak Circle Tea name tags",                    "status": "notStarted"},
+      {"id": "et_maple", "title": "MJ Oak Circle Tea at Maple Street tomorrow 4pm RSVP", "status": "notStarted"}
+    ],
+    "recent_top_30_status_agnostic": [
+      {"id": "completed_00", "title": "MJ Done thing 0", "status": "completed"},
+      {"id": "completed_01", "title": "MJ Done thing 1", "status": "completed"},
+      {"id": "completed_02", "title": "MJ Done thing 2", "status": "completed"},
+      {"id": "completed_03", "title": "MJ Done thing 3", "status": "completed"},
+      {"id": "completed_04", "title": "MJ Done thing 4", "status": "completed"},
+      {"id": "completed_05", "title": "MJ Done thing 5", "status": "completed"},
+      {"id": "completed_06", "title": "MJ Done thing 6", "status": "completed"},
+      {"id": "completed_07", "title": "MJ Done thing 7", "status": "completed"},
+      {"id": "completed_08", "title": "MJ Done thing 8", "status": "completed"},
+      {"id": "completed_09", "title": "MJ Done thing 9", "status": "completed"},
+      {"id": "completed_10", "title": "MJ Done thing 10", "status": "completed"},
+      {"id": "completed_11", "title": "MJ Done thing 11", "status": "completed"},
+      {"id": "completed_12", "title": "MJ Done thing 12", "status": "completed"},
+      {"id": "completed_13", "title": "MJ Done thing 13", "status": "completed"},
+      {"id": "completed_14", "title": "MJ Done thing 14", "status": "completed"},
+      {"id": "completed_15", "title": "MJ Done thing 15", "status": "completed"},
+      {"id": "completed_16", "title": "MJ Done thing 16", "status": "completed"},
+      {"id": "completed_17", "title": "MJ Done thing 17", "status": "completed"},
+      {"id": "completed_18", "title": "MJ Done thing 18", "status": "completed"},
+      {"id": "completed_19", "title": "MJ Done thing 19", "status": "completed"},
+      {"id": "completed_20", "title": "MJ Done thing 20", "status": "completed"},
+      {"id": "completed_21", "title": "MJ Done thing 21", "status": "completed"},
+      {"id": "completed_22", "title": "MJ Done thing 22", "status": "completed"},
+      {"id": "completed_23", "title": "MJ Done thing 23", "status": "completed"},
+      {"id": "completed_24", "title": "MJ Done thing 24", "status": "completed"},
+      {"id": "completed_25", "title": "MJ Done thing 25", "status": "completed"},
+      {"id": "completed_26", "title": "MJ Done thing 26", "status": "completed"},
+      {"id": "completed_27", "title": "MJ Done thing 27", "status": "completed"},
+      {"id": "completed_28", "title": "MJ Done thing 28", "status": "completed"},
+      {"id": "completed_29", "title": "MJ Done thing 29", "status": "completed"}
+    ]
+  },
+  "mock_llm_responses": {
+    "classify_action_intent": {
+      "has_action": true,
+      "action_type": "mark_done",
+      "target_text": "oak circle tea pending tasks",
+      "confidence": "low"
+    },
+    "match_target_to_open_task": {
+      "match_id": null,
+      "candidate_task_ids": ["et_zoom", "et_cater", "et_print", "et_maple"],
+      "confidence": "medium",
+      "reasoning": "Four open Oak Circle Tea tasks; 'pending' = notStarted, 'all' = batch."
+    },
+    "compose_action_clarifying_reply": "Found 4 Oak Circle Tea tasks still open: Zoom link, catering count, name tags, Maple Street RSVP. Mark all four?"
+  },
+  "expected_outcome": {
+    "matcher_received_open_filter_results_not_recency_top_30": true,
+    "matcher_candidate_count": 4,
+    "result_status": "action_clarifying"
+  },
+  "regression_for_commit": "cef1817"
+}

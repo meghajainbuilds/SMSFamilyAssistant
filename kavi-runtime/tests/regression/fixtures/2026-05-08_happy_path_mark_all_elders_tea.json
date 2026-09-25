@@ -1,0 +1,77 @@
+{
+  "id": "2026-05-08_happy_path_mark_all_elders_tea",
+  "description": "The working case after all six fix commits landed. Two-turn flow: Megha says 'Mark all oak circle tea items done' (19:06:26Z); matcher returns the 4 Oak Circle Tea ids; clarifying composer asks 'mark all four?'; Megha replies 'Yes' (19:07:21Z); resolver returns execute on all 4 ids; runtime PATCHes 4x; all complete in MS To Do; post-action reply confirms.",
+  "turn1": {
+    "inbound": {
+      "text": "Mark all oak circle tea items done",
+      "sender": "+15555550101",
+      "ts": "2026-05-08T19:06:26Z"
+    },
+    "graph_state": {
+      "open_tasks": [
+        {"id": "et_zoom",   "title": "MJ Forward Oak Circle Tea Zoom link to your guest",       "status": "notStarted"},
+        {"id": "et_cater",  "title": "MJ Confirm Oak Circle Tea catering count by Friday",       "status": "notStarted"},
+        {"id": "et_print",  "title": "MJ Print Oak Circle Tea name tags",                        "status": "notStarted"},
+        {"id": "et_maple", "title": "MJ Oak Circle Tea at Maple Street tomorrow 4pm RSVP",     "status": "notStarted"},
+        {"id": "t_other_00", "title": "MJ Pay Northgate Medical overdue balance ($630.00)",          "status": "notStarted"},
+        {"id": "t_other_01", "title": "MJ Schedule Max swim lesson",                           "status": "notStarted"}
+      ]
+    },
+    "mock_llm_responses": {
+      "classify_action_intent": {
+        "has_action": true,
+        "action_type": "mark_done",
+        "target_text": "oak circle tea items",
+        "confidence": "low"
+      },
+      "match_target_to_open_task": {
+        "match_id": null,
+        "candidate_task_ids": ["et_zoom", "et_cater", "et_print", "et_maple"],
+        "confidence": "medium",
+        "reasoning": "Four open Oak Circle Tea tasks; 'all' is a batch reference."
+      },
+      "compose_action_clarifying_reply": "Found 4 Oak Circle Tea tasks: Zoom link, catering count, name tags, Maple Street RSVP. Mark all four?"
+    },
+    "expected_outcome": {
+      "result_status": "action_clarifying",
+      "pending_clarification_holds_4_ids": true,
+      "user_visible_reply_must_name_tasks": true
+    }
+  },
+  "turn2": {
+    "inbound": {
+      "text": "Yes",
+      "sender": "+15555550101",
+      "ts": "2026-05-08T19:07:21Z"
+    },
+    "pending_clarification_state": {
+      "action_type": "mark_done",
+      "original_inbound": "Mark all oak circle tea items done",
+      "proposed_matches": [
+        {"id": "et_zoom",   "title": "MJ Forward Oak Circle Tea Zoom link to your guest"},
+        {"id": "et_cater",  "title": "MJ Confirm Oak Circle Tea catering count by Friday"},
+        {"id": "et_print",  "title": "MJ Print Oak Circle Tea name tags"},
+        {"id": "et_maple", "title": "MJ Oak Circle Tea at Maple Street tomorrow 4pm RSVP"}
+      ],
+      "reply_sent": "Found 4 Oak Circle Tea tasks: Zoom link, catering count, name tags, Maple Street RSVP. Mark all four?"
+    },
+    "mock_llm_responses": {
+      "resolve_pending_action_clarification": {
+        "resolution": "execute",
+        "confirmed_match_ids": ["et_zoom", "et_cater", "et_print", "et_maple"],
+        "reasoning": "bare 'Yes' confirms all four candidates"
+      },
+      "compose_batch_action_reply": "Marked all four Oak Circle Tea tasks done: Zoom link, catering count, name tags, Maple Street RSVP."
+    },
+    "expected_outcome": {
+      "result_status": "pending_clarification_executed",
+      "executed_count": 4,
+      "failed_count": 0,
+      "graph_mark_task_done_call_count": 4,
+      "graph_mark_task_done_called_with_ids": ["et_zoom", "et_cater", "et_print", "et_maple"],
+      "tool_grounded": true,
+      "pending_state_cleared": true
+    }
+  },
+  "regression_for_commit": "current-main"
+}
