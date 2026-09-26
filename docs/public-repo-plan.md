@@ -24,6 +24,12 @@ Builder
 
 Then a **concept map**: about 15 AI product, builder and leadership concepts. Each row links to the file that proves it, for example "blameless incident review" linking to the realtime-kavi changelog entry for 2026-09-23.
 
+## Status (2026-09-25): PUBLIC
+
+Published as https://github.com/meghajainbuilds/SMSFamilyAssistant (Megha named it). One snapshot commit, authored with the GitHub no-reply address; the private HomeOS repo keeps full history and stays the working repo. Sync later snapshots with `scripts/publish_public.sh "message"` (leak scan runs first).
+
+Cut for today (Megha's call to ship on Sonnet today): step 3's full "runnable by anyone" pass; the README calls it a reference build. Household identity did move into config. Open: GitHub Actions leak check needs `gh auth refresh -s workflow`; rotate the BlueBubbles password and healthchecks URL (both only in private history).
+
 ## Remaining work to go public safely (rewritten 2026-09-24)
 
 One repo. Private data stays on disk, gitignored. Nothing flips public until every gate below is green. Each step ships to Kavi and passes tests before the next starts.
